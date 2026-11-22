@@ -3092,7 +3092,7 @@ function saveOnlineServer(){
  onlineText(value?'Multiplayer server saved!':'Using this website as the multiplayer server.');return true;
  }catch(e){onlineText('Invalid server URL. Paste the HTTPS URL from your Render Web Service.');return false}
 }
-function onlineWebSocketURL(){const value=normalOnlineServer($('onlineServerAddress').value.trim());if(value){const u=new URL(value);return (u.protocol==='https:'?'wss://':'ws://')+u.host+'/ws'}return (location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws'}
+function onlineWebSocketURL(){const value=normalOnlineServer($('onlineServerAddress').value.trim());if(value){const u=new URL(value);return (u.protocol==='https:'?'wss://':'ws://')+u.host+'/ws?room=rocket-rivals'}return (location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws?room=rocket-rivals'}
 function onlineSend(message){if(online.socket&&online.socket.readyState===WebSocket.OPEN)online.socket.send(JSON.stringify(message))}
 function onlineSocket(action,room=''){
  if(online.socket)leaveOnline();onlineText('Connecting to the multiplayer server…');

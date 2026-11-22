@@ -4,11 +4,19 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Bored Arcade</title>
+<link rel="icon" type="image/svg+xml" href="/img/icons/arcade.svg">
+<link rel="apple-touch-icon" href="/img/icons/arcade-180.png">
+<meta name="theme-color" content="#0d0920">
 <meta name="description" content="Browser games to play with your friends. No downloads.">
+<meta property="og:title" content="Bored Arcade">
+<meta property="og:description" content="Games to play with your friends. No downloads.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="/img/og-arcade.jpg">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Rubik+Mono+One&family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#0d0920;--ink:#f4efff;--dim:#b3a8d6;--line:#ffffff1f;--hot:#ffd84a;--pink:#ff4fa3;--cyan:#38c6ff;color-scheme:dark}
+:root{--bg:#0d0920;--ink:#f4efff;--dim:#b3a8d6;--line:#ffffff1f;--hot:#ffd84a;--pink:#ff4fa3;--cyan:#38c6ff;--panel:#1a1238;color-scheme:dark}
 *{box-sizing:border-box}
 html,body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);font:16px/1.5 Fredoka,system-ui,sans-serif}
 body{background:
@@ -17,31 +25,46 @@ body{background:
   linear-gradient(180deg,#0d0920 0,#120b2b 60%,#0d0920 100%);background-attachment:fixed}
 body::before{content:"";position:fixed;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,#ffffff06 0 1px,transparent 1px 3px);z-index:0}
 a{color:inherit}
+button{font:inherit;cursor:pointer}
 .wrap{position:relative;z-index:1;max-width:1120px;margin:0 auto;padding:28px 20px 60px}
-header{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:18px}
+.brand img{width:84px;height:84px;filter:drop-shadow(0 6px 0 #0007)}
 .logo{font:400 clamp(30px,5.4vw,58px)/.95 "Rubik Mono One",system-ui,sans-serif;letter-spacing:-.01em;margin:0;
   color:#fff;text-shadow:0 0 18px #ff4fa3aa,0 0 42px #7a3cff88,3px 3px 0 #ff4fa3,6px 6px 0 #5a2bd6}
-.logo small{display:block;font:600 clamp(14px,1.6vw,18px) Fredoka,sans-serif;letter-spacing:.02em;color:var(--dim);text-shadow:none;margin-top:12px}
+.sub{font:600 clamp(14px,1.6vw,18px) Fredoka,sans-serif;color:var(--dim);margin:12px 0 0}
+.acct{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}
 .chip{display:flex;align-items:center;gap:10px;background:#ffffff10;border:1px solid var(--line);border-radius:999px;padding:8px 14px;font-weight:600;font-size:14px;white-space:nowrap}
-.chip[hidden]{display:none}
-.chip .gem{width:10px;height:10px;transform:rotate(45deg);border-radius:2px;display:inline-block}
-.marquee{margin:28px 0 22px;display:flex;align-items:center;gap:12px;color:var(--dim);font-weight:500}
+.gem{width:10px;height:10px;transform:rotate(45deg);border-radius:2px;display:inline-block}
+.pill{border:0;border-radius:999px;padding:9px 16px;font-weight:600;font-size:14px;background:var(--ink);color:#120b2b;box-shadow:0 3px 0 #0008}
+.pill.ghost{background:#ffffff14;color:var(--ink);box-shadow:none;border:1px solid var(--line)}
+.pill:hover{filter:brightness(1.08)}
+[hidden]{display:none!important}
+.marquee{margin:26px 0 18px;display:flex;align-items:center;gap:12px;color:var(--dim);font-weight:500;flex-wrap:wrap}
 .marquee b{color:var(--hot)}
 .dot{width:9px;height:9px;border-radius:50%;background:#5fd35f;box-shadow:0 0 10px #5fd35f;display:inline-block;flex:none}
+.dot.off{background:#777;box-shadow:none}
+.notice{margin:0 0 18px;padding:12px 16px;border-radius:14px;background:#ff6a2a1f;border:1px solid #ff6a2a66;color:#ffd9c4;font-weight:500}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:22px}
 .card{position:relative;display:flex;flex-direction:column;border-radius:20px;overflow:hidden;text-decoration:none;
-  background:#1a1238;border:2px solid var(--line);box-shadow:0 10px 0 #0006;transition:transform .15s,box-shadow .15s,border-color .15s}
+  background:var(--panel);border:2px solid var(--line);box-shadow:0 10px 0 #0006;transition:transform .15s,box-shadow .15s,border-color .15s}
 .card:hover,.card:focus-visible{transform:translateY(-5px) rotate(-.4deg);box-shadow:0 16px 0 #0006,0 0 0 3px var(--acc),0 0 40px -6px var(--acc);border-color:transparent;outline:none}
 .shot{position:relative;aspect-ratio:16/9;background:#000 center/cover no-repeat;border-bottom:2px solid var(--line)}
-.shot::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 55%,#1a1238 100%)}
-.live{position:absolute;left:12px;top:12px;z-index:1;display:flex;align-items:center;gap:7px;background:#0d0920d9;border-radius:999px;padding:5px 11px;font-size:13px;font-weight:600}
-.live .dot{width:8px;height:8px}
-.live.zero .dot{background:#888;box-shadow:none}
-.body{padding:16px 18px 18px;display:flex;flex-direction:column;gap:10px;flex:1}
-.title{font:400 22px/1.05 "Rubik Mono One",system-ui,sans-serif;margin:0;color:var(--acc)}
+.shot::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 55%,var(--panel) 100%)}
+.badges{position:absolute;left:12px;top:12px;right:12px;z-index:1;display:flex;gap:8px;flex-wrap:wrap}
+.badge{display:flex;align-items:center;gap:7px;background:#0d0920d9;border-radius:999px;padding:5px 11px;font-size:13px;font-weight:600}
+.badge .dot{width:8px;height:8px}
+.badge.last{background:var(--acc);color:#120b2b}
+.key{position:absolute;right:12px;top:12px;z-index:1;font:600 12px Fredoka,sans-serif;background:#0d0920d9;color:var(--dim);border-radius:8px;padding:3px 8px}
+.body{position:relative;padding:4px 18px 18px;display:flex;flex-direction:column;gap:10px;flex:1}
+.head{display:flex;align-items:center;gap:12px;margin-top:-34px;position:relative;z-index:2}
+.head img{width:64px;height:64px;border-radius:16px;box-shadow:0 5px 0 #0008,0 0 0 3px var(--panel)}
+.title{font:400 22px/1.05 "Rubik Mono One",system-ui,sans-serif;margin:22px 0 0;color:var(--acc)}
 .desc{margin:0;color:#d9d2f2;font-size:15px}
 .tags{display:flex;flex-wrap:wrap;gap:6px}
 .tags span{font-size:12px;font-weight:600;padding:3px 9px;border-radius:999px;background:#ffffff12;color:var(--dim)}
+.who{font-size:13px;color:var(--dim);min-height:20px}
+.who b{color:var(--ink);font-weight:600}
 .play{margin-top:auto;display:flex;align-items:center;justify-content:space-between;gap:10px}
 .btn{display:inline-flex;align-items:center;gap:8px;font:400 15px "Rubik Mono One",system-ui,sans-serif;color:#120b2b;background:var(--acc);border-radius:12px;padding:12px 18px;box-shadow:0 4px 0 #0008}
 .card:hover .btn{filter:brightness(1.08)}
@@ -51,36 +74,63 @@ header{display:flex;align-items:center;justify-content:space-between;gap:16px;fl
 .soon .big{font:400 40px "Rubik Mono One",sans-serif;color:#ffffff2a;margin-bottom:6px}
 .share{margin-top:34px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:#ffffff0b;border:1px solid var(--line);border-radius:16px;padding:14px 16px}
 .share code{font:600 15px Fredoka,monospace;background:#0006;padding:7px 11px;border-radius:9px;color:var(--hot);word-break:break-all}
-.share button{font:600 14px Fredoka,sans-serif;border:0;border-radius:10px;padding:8px 14px;background:var(--ink);color:#120b2b;cursor:pointer}
-footer{margin-top:26px;color:#8a80ad;font-size:13px}
-@media (max-width:520px){.grid{grid-template-columns:1fr}.chip{font-size:13px}}
+footer{margin-top:22px;color:#8a80ad;font-size:13px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+/* loading + modal */
+#loading{position:fixed;inset:0;z-index:20;display:grid;place-items:center;background:#0d0920e6;backdrop-filter:blur(4px)}
+#loading .box{text-align:center}
+#loading img{width:110px;height:110px;animation:bob 1s ease-in-out infinite}
+#loading p{font:400 18px "Rubik Mono One",sans-serif;margin:14px 0 4px}
+#loading small{color:var(--dim)}
+@keyframes bob{50%{transform:translateY(-10px) rotate(-4deg)}}
+#modal{position:fixed;inset:0;z-index:15;display:grid;place-items:center;background:#05030fcc;padding:16px}
+#modal .box{width:min(380px,100%);background:var(--panel);border:2px solid var(--line);border-radius:20px;padding:22px;box-shadow:0 14px 0 #0008}
+#modal h2{font:400 20px "Rubik Mono One",sans-serif;margin:0 0 12px}
+.tabs{display:flex;gap:6px;margin-bottom:10px}
+.tabs button{flex:1;border:0;border-radius:10px;padding:9px;font-weight:600;background:#ffffff12;color:var(--ink)}
+.tabs button.on{background:var(--ink);color:#120b2b}
+#modal input{width:100%;margin:5px 0;padding:11px 12px;border-radius:11px;border:2px solid #ffffff26;background:#0d0920;color:var(--ink);font:500 15px Fredoka,sans-serif}
+#modal input:focus{outline:none;border-color:var(--cyan)}
+.err{color:#ff9a9a;font-size:13px;min-height:20px;margin:4px 0}
+.row{display:flex;gap:8px;justify-content:flex-end}
+.note{font-size:12px;color:var(--dim);margin:10px 0 0}
+@media (max-width:560px){.grid{grid-template-columns:1fr}.brand img{width:60px;height:60px}.key{display:none}}
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
-    <h1 class="logo">BORED<br>ARCADE<small>Games we made. Grab your friends and play, no downloads.</small></h1>
-    <div class="chip" id="chip" hidden></div>
+    <div>
+      <div class="brand"><img src="/img/icons/arcade.svg" alt=""><h1 class="logo">BORED<br>ARCADE</h1></div>
+      <p class="sub">Games we made. Grab your friends and play, no downloads.</p>
+    </div>
+    <div class="acct">
+      <div class="chip" id="chip" hidden></div>
+      <button class="pill" id="loginBtn" hidden>Log in / Sign up</button>
+      <button class="pill ghost" id="logoutBtn" hidden>Log out</button>
+    </div>
   </header>
 
-  <div class="marquee"><span class="dot"></span><span id="total">Checking who's online&hellip;</span></div>
+  <div class="marquee"><span class="dot off" id="tdot"></span><span id="total">Checking who's online&hellip;</span></div>
+  <p class="notice" id="touch" hidden>Heads up: these games need a keyboard and mouse, so they work best on a computer.</p>
 
-  <main class="grid">
-    <a class="card" href="/storm-drop/" style="--acc:#ffd84a">
-      <div class="shot" style="background-image:url(/img/storm-drop.jpg)"><div class="live zero" data-game="storm-drop"><span class="dot"></span><span>0 playing</span></div></div>
+  <main class="grid" id="grid">
+    <a class="card" href="/storm-drop/" data-game="storm-drop" data-name="Storm Drop" style="--acc:#ffd84a">
+      <div class="shot" style="background-image:url(/img/storm-drop.jpg)"><div class="badges"><div class="badge live"><span class="dot off"></span><span>0 playing</span></div></div><span class="key">press 1</span></div>
       <div class="body">
-        <h2 class="title">Storm Drop</h2>
+        <div class="head"><img src="/img/icons/storm-drop.svg" alt=""><h2 class="title">Storm Drop</h2></div>
         <p class="desc">Battle royale for up to 40 people. Parachute in, loot, build walls, and be the last one standing while the storm closes in.</p>
-        <div class="tags"><span>Battle royale</span><span>Duos</span><span>4 maps</span><span>Ranked</span><span>3D</span></div>
+        <div class="tags"><span>Battle royale</span><span>Duos</span><span>4 maps</span><span>Ranked</span><span>3D</span><span>Keyboard + mouse</span></div>
+        <div class="who"></div>
         <div class="play"><span class="mode">Everyone joins the same lobby</span><span class="btn">PLAY &rarr;</span></div>
       </div>
     </a>
-    <a class="card" href="/stick-rounds/" style="--acc:#ff6a2a">
-      <div class="shot" style="background-image:url(/img/stick-rounds.jpg)"><div class="live zero" data-game="stick-rounds"><span class="dot"></span><span>0 playing</span></div></div>
+    <a class="card" href="/stick-rounds/" data-game="stick-rounds" data-name="Stick Rounds" style="--acc:#ff6a2a">
+      <div class="shot" style="background-image:url(/img/stick-rounds.jpg)"><div class="badges"><div class="badge live"><span class="dot off"></span><span>0 playing</span></div></div><span class="key">press 2</span></div>
       <div class="body">
-        <h2 class="title">Stick Rounds</h2>
+        <div class="head"><img src="/img/icons/stick-rounds.svg" alt=""><h2 class="title">Stick Rounds</h2></div>
         <p class="desc">One-on-one stickman duels across parkour maps. After every round, both fighters draft an ability card, so builds get weirder as you go.</p>
-        <div class="tags"><span>1v1</span><span>Ability cards</span><span>Room codes</span><span>Vs bot</span><span>2 players, 1 keyboard</span></div>
+        <div class="tags"><span>1v1</span><span>Ability cards</span><span>Room codes</span><span>Vs bot</span><span>2 players, 1 keyboard</span><span>Keyboard + mouse</span></div>
+        <div class="who"></div>
         <div class="play"><span class="mode">Make a room and send the code</span><span class="btn">PLAY &rarr;</span></div>
       </div>
     </a>
@@ -88,38 +138,105 @@ footer{margin-top:26px;color:#8a80ad;font-size:13px}
   </main>
 
   <div class="share">
-    <span>Send your friends this link:</span><code id="link"></code><button id="copy">Copy</button>
+    <span>Send your friends this link:</span><code id="link"></code><button class="pill" id="copy">Copy</button><button class="pill ghost" id="shareBtn" hidden>Share&hellip;</button>
   </div>
-  <footer>Your coins, rank and items save when you log in inside Storm Drop.</footer>
+  <footer><span>Log in once and your Storm Drop coins, rank and items follow you to any device.</span><span>Tip: press 1 or 2 to jump into a game.</span></footer>
 </div>
+
+<div id="loading" hidden><div class="box"><img id="ldIcon" alt=""><p id="ldName">Loading</p><small>If nobody has played in a while, the server takes up to a minute to wake up.</small></div></div>
+
+<div id="modal" hidden><div class="box" role="dialog" aria-modal="true" aria-labelledby="mTitle">
+  <h2 id="mTitle">Your account</h2>
+  <div class="tabs"><button id="tIn" class="on">Log in</button><button id="tUp">Sign up</button></div>
+  <input id="mEmail" type="email" placeholder="Email" autocomplete="email" maxlength="120">
+  <input id="mPass" type="password" placeholder="Password (6+ characters)" autocomplete="current-password" maxlength="200">
+  <input id="mName" placeholder="Player name" maxlength="12" hidden>
+  <div class="err" id="mErr"></div>
+  <div class="row"><button class="pill ghost" id="mCancel">Cancel</button><button class="pill" id="mGo">Log in</button></div>
+  <p class="note" id="mNote">Same account as Storm Drop: coins, items, rank and stats.</p>
+</div></div>
+
 <script>
 (function(){
   const $=id=>document.getElementById(id);
-  $('link').textContent=location.origin+'/';
-  $('copy').onclick=()=>{const t=location.origin+'/';(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>{$('copy').textContent='Copied!';setTimeout(()=>$('copy').textContent='Copy',1500);}).catch(()=>{prompt('Copy this link:',t);});};
+  const LS={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
+  const site=location.origin+'/';
+  $('link').textContent=site;
 
-  // live player counts
+  // ---------- share / copy
+  $('copy').onclick=()=>{(navigator.clipboard?navigator.clipboard.writeText(site):Promise.reject()).then(()=>{$('copy').textContent='Copied!';setTimeout(()=>$('copy').textContent='Copy',1500);}).catch(()=>prompt('Copy this link:',site));};
+  if(navigator.share){$('shareBtn').hidden=false;$('shareBtn').onclick=()=>navigator.share({title:'Bored Arcade',text:'Come play with me',url:site}).catch(()=>{});}
+
+  // ---------- touch-only devices
+  if(matchMedia('(hover:none) and (pointer:coarse)').matches)$('touch').hidden=false;
+
+  // ---------- last played + loading screen when opening a game
+  const cards=[...document.querySelectorAll('.card[data-game]')];
+  function markLast(){let last=null;try{last=JSON.parse(LS.get('arcade-last')||'null');}catch(e){}
+    for(const c of cards){const old=c.querySelector('.badge.last');if(old)old.remove();
+      if(last&&last.g===c.dataset.game){const b=document.createElement('div');b.className='badge last';b.textContent='▶ Last played';c.querySelector('.badges').appendChild(b);}}}
+  markLast();
+  function openGame(c){LS.set('arcade-last',JSON.stringify({g:c.dataset.game,t:Date.now()}));
+    $('ldIcon').src=c.querySelector('.head img').src;$('ldName').textContent='Loading '+c.dataset.name+'…';$('loading').hidden=false;}
+  for(const c of cards)c.addEventListener('click',e=>{if(e.metaKey||e.ctrlKey||e.shiftKey||e.button!==0)return;openGame(c);});
+  addEventListener('pageshow',()=>{$('loading').hidden=true;markLast();});
+  addEventListener('keydown',e=>{if(!$('modal').hidden||e.target.tagName==='INPUT'||e.metaKey||e.ctrlKey||e.altKey)return;const i=+e.key-1;if(i>=0&&i<cards.length){openGame(cards[i]);location.href=cards[i].getAttribute('href');}});
+
+  // ---------- live player counts + who's online
   async function stats(){
     try{
-      const r=await fetch('/api/stats',{cache:'no-store'});if(!r.ok)throw 0;const s=await r.json();let sum=0;
-      document.querySelectorAll('.live').forEach(el=>{const n=+s[el.dataset.game]||0;sum+=n;el.classList.toggle('zero',!n);el.lastElementChild.textContent=n+' playing';});
+      const r=await fetch('/api/stats',{cache:'no-store'});if(!r.ok)throw 0;const s=await r.json();let sum=0;const names=s.names||{};
+      for(const c of cards){const g=c.dataset.game,n=+s[g]||0;sum+=n;
+        const live=c.querySelector('.badge.live');live.querySelector('.dot').classList.toggle('off',!n);live.lastElementChild.textContent=n+' playing';
+        const who=c.querySelector('.who'),list=names[g]||[];who.textContent='';
+        if(list.length){who.append('Online: ');const b=document.createElement('b');b.textContent=list.slice(0,8).join(', ')+(list.length>8?' +'+(list.length-8)+' more':'');who.appendChild(b);}}
+      $('tdot').classList.toggle('off',!sum);
       $('total').innerHTML=sum?'<b>'+sum+'</b> '+(sum===1?'person is':'people are')+' playing right now':'Nobody is on right now. Start a game and invite your friends!';
     }catch(e){$('total').textContent='Games are ready to play.';}
   }
-  stats();setInterval(stats,10000);
+  stats();setInterval(()=>{if(!document.hidden)stats();},8000);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)stats();});
 
-  // account chip (shared with Storm Drop's login on this site)
+  // ---------- accounts (same login as Storm Drop: shared token on this site)
   const RANKS=[['Bronze','#cd7f32',0],['Silver','#c4ccd8',400],['Gold','#ffc531',1000],['Plat','#4fd1c5',2000],['Diamond','#6cb6ff',3500],['Grandmaster','#ff4f6d',5500]];
-  let tok=null;try{tok=localStorage.getItem('stormdrop-tok');}catch(e){}
-  if(tok)fetch('/api/me',{headers:{authorization:'Bearer '+tok}}).then(r=>r.ok?r.json():null).then(j=>{
-    if(!j)return;const d=j.data||{},elo=+d.elo||0;let rk=RANKS[0];for(const R of RANKS)if(elo>=R[2])rk=R;
+  let tok=LS.get('stormdrop-tok');
+  function api(path,body){return fetch(path,{method:body?'POST':'GET',headers:Object.assign({'content-type':'application/json'},tok?{authorization:'Bearer '+tok}:{}),body:body?JSON.stringify(body):undefined})
+    .then(async r=>{let j={};try{j=await r.json();}catch(e){}if(!r.ok){const er=new Error(j.error||('Server error '+r.status));er.code=r.status;throw er;}return j;});}
+  function showGuest(){$('chip').hidden=true;$('logoutBtn').hidden=true;$('loginBtn').hidden=false;}
+  function showUser(j){const d=j.data||{},elo=+d.elo||0;let rk=RANKS[0];for(const R of RANKS)if(elo>=R[2])rk=R;
     const c=$('chip');c.textContent='';
-    const nm=document.createElement('span');nm.textContent=(d.name||j.name||j.email);c.appendChild(nm);
+    const nm=document.createElement('span');nm.textContent=d.name||j.name||j.email;c.appendChild(nm);
     const g=document.createElement('span');g.className='gem';g.style.background=rk[1];c.appendChild(g);
-    const r2=document.createElement('span');r2.style.color=rk[1];r2.textContent=rk[0];c.appendChild(r2);
+    const r2=document.createElement('span');r2.style.color=rk[1];r2.textContent=rk[0]+' · '+elo;c.appendChild(r2);
     const co=document.createElement('span');co.style.color='#ffd84a';co.textContent='\u{1FA99} '+(+d.coins||0);c.appendChild(co);
-    c.hidden=false;
-  }).catch(()=>{});
+    c.title=j.email||'';c.hidden=false;$('loginBtn').hidden=true;$('logoutBtn').hidden=false;}
+  function refreshMe(){if(!tok){showGuest();return;}api('/api/me').then(showUser).catch(e=>{if(e.code===401){tok=null;LS.del('stormdrop-tok');}showGuest();});}
+  refreshMe();
+
+  let up=false;
+  function openModal(signup){up=signup;$('modal').hidden=false;$('mErr').textContent='';$('tIn').classList.toggle('on',!up);$('tUp').classList.toggle('on',up);
+    $('mName').hidden=!up;$('mGo').textContent=up?'Create account':'Log in';$('mPass').autocomplete=up?'new-password':'current-password';
+    $('mNote').textContent=up?'Any Storm Drop progress you have on this device moves into the new account.':'Same account as Storm Drop: coins, items, rank and stats.';
+    if(up&&!$('mName').value){try{const s=JSON.parse(LS.get('stormdrop')||'{}');if(s.n)$('mName').value=s.n;}catch(e){}}
+    setTimeout(()=>$('mEmail').focus(),30);}
+  const closeModal=()=>{$('modal').hidden=true;};
+  $('loginBtn').onclick=()=>openModal(false);$('tIn').onclick=()=>openModal(false);$('tUp').onclick=()=>openModal(true);$('mCancel').onclick=closeModal;
+  $('modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal();});
+  addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('modal').hidden)closeModal();});
+  for(const id of ['mEmail','mPass','mName'])$(id).addEventListener('keydown',e=>{if(e.key==='Enter')$('mGo').click();});
+  $('mGo').onclick=async()=>{const email=$('mEmail').value.trim(),password=$('mPass').value,err=$('mErr');
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){err.textContent='Enter a valid email.';return;}
+    if(password.length<6){err.textContent='Password needs at least 6 characters.';return;}
+    $('mGo').disabled=true;err.textContent=up?'Creating account…':'Logging in…';
+    try{let j;
+      if(up){let data={};try{data=JSON.parse(LS.get('stormdrop-prof')||'{}')||{};}catch(e){}
+        const name=($('mName').value||'').replace(/[^\w \-.]/g,'').trim().slice(0,12);if(name)data.name=name;
+        j=await api('/api/signup',{email,password,name:name||undefined,data});}
+      else j=await api('/api/login',{email,password});
+      tok=j.token;LS.set('stormdrop-tok',tok);LS.del('stormdrop-prof-acct');
+      $('mPass').value='';err.textContent='';closeModal();showUser({email:j.email,data:j.data});}
+    catch(e){err.textContent=e.message;}finally{$('mGo').disabled=false;}};
+  $('logoutBtn').onclick=()=>{if(tok)api('/api/logout',{}).catch(()=>{});tok=null;LS.del('stormdrop-tok');LS.del('stormdrop-prof-acct');showGuest();};
 })();
 </script>
 </body>

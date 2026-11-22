@@ -779,7 +779,10 @@ wss.on('connection', (ws, req) => {
   });
 
   if (room === 'hub') { hubSocket(ws, req).catch(() => {}); return; }
-  if (room === 'rocket-rivals') { rrAttach(ws); return; }
+  if (room === 'rocket-rivals') {
+    if (tokenOf(req)) authUser(req).then((u) => { if (u && ws.readyState === 1) { ws.user = u; trackSocket(ws, u); } }).catch(() => {});
+    rrAttach(ws); return;
+  }
 
   // game rooms: if the player is logged in (cookie), mark them as playing this game
   if (tokenOf(req)) authUser(req).then((u) => { if (u && ws.readyState === 1) trackSocket(ws, u); }).catch(() => {});

@@ -5,6 +5,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const zlib = require('zlib');
 const { WebSocketServer } = require('ws');
 
 const PORT = process.env.PORT || 3000;
@@ -15,6 +16,8 @@ const MAX_TOTAL = 300;
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json',
   '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.ico': 'image/x-icon',
   '.mp3': 'audio/mpeg', '.ogg': 'audio/ogg', '.wav': 'audio/wav', '.woff2': 'font/woff2', '.txt': 'text/plain; charset=utf-8' };
+const COMPRESS = new Set(['.html', '.js', '.css', '.svg', '.json', '.txt']);
+const gzCache = new Map();
 function serveStatic(req, res, url) {
   let rel;
   try { rel = decodeURIComponent(url); } catch { res.writeHead(400); return res.end('bad url'); }
@@ -27,8 +30,27 @@ function serveStatic(req, res, url) {
     }
     if (err) { res.writeHead(404, { 'content-type': 'text/html; charset=utf-8' }); return res.end('<h1>Not found</h1><p><a href="/">Back to the arcade</a></p>'); }
     const ext = path.extname(file).toLowerCase();
-    res.writeHead(200, { 'content-type': TYPES[ext] || 'application/octet-stream', 'content-length': st.size,
-      'cache-control': ext === '.html' ? 'no-cache' : 'public, max-age=86400' });
+    // link previews (Discord, iMessage...) need full image URLs, so fill in this site's address
+    const origin = (String(req.headers['x-forwarded-proto'] || 'http').split(',')[0]) + '://' + String(req.headers.host || '').replace(/[^\w.:-]/g, '');
+    const withOrigin = (buf, e) => (e === '.html' ? Buffer.from(buf.toString('utf8').replace(/content="\/img\//g, 'content="' + origin + '/img/')) : buf);
+    const headers = { 'content-type': TYPES[ext] || 'application/octet-stream', 'cache-control': ext === '.html' ? 'no-cache' : 'public, max-age=86400' };
+    // text files are sent gzipped (much faster first load); compressed copies are cached in memory
+    if (COMPRESS.has(ext) && /\bgzip\b/.test(req.headers['accept-encoding'] || '')) {
+      const key = file + ':' + st.mtimeMs + ':' + origin;
+      let gz = gzCache.get(file);
+      if (!gz || gz.key !== key) {
+        try { gz = { key, buf: zlib.gzipSync(withOrigin(fs.readFileSync(file), ext), { level: 9 }) }; gzCache.set(file, gz); }
+        catch { res.writeHead(500); return res.end(); }
+      }
+      res.writeHead(200, { ...headers, 'content-encoding': 'gzip', 'content-length': gz.buf.length, vary: 'Accept-Encoding' });
+      return res.end(req.method === 'HEAD' ? undefined : gz.buf);
+    }
+    if (ext === '.html') {
+      let body; try { body = withOrigin(fs.readFileSync(file), ext); } catch { res.writeHead(500); return res.end(); }
+      res.writeHead(200, { ...headers, 'content-length': body.length });
+      return res.end(req.method === 'HEAD' ? undefined : body);
+    }
+    res.writeHead(200, { ...headers, 'content-length': st.size });
     if (req.method === 'HEAD') return res.end();
     fs.createReadStream(file).pipe(res);
   });
@@ -200,8 +222,18 @@ async function authUser(req) {
 async function handleApi(req, res, url) {
   if (url === '/api/ping') return send(res, 200, { ok: true, db: store.kind });
   if (url === '/api/stats') {
-    const out = { 'storm-drop': 0, 'stick-rounds': 0 };
-    for (const [room, m] of rooms) { if (room === 'stormdrop') out['storm-drop'] += m.size; else if (room.startsWith('sr-')) out['stick-rounds'] += m.size; }
+    const out = { 'storm-drop': 0, 'stick-rounds': 0, names: { 'storm-drop': [], 'stick-rounds': [] } };
+    const nm = (v) => (typeof v === 'string' ? v.replace(/[^\w \-.]/g, '').trim().slice(0, 12) : '');
+    for (const [room, m] of rooms) {
+      const g = room === 'stormdrop' ? 'storm-drop' : room.startsWith('sr-') ? 'stick-rounds' : null;
+      if (!g) continue;
+      out[g] += m.size;
+      for (const [, c] of m) {
+        const p = c.p || {};
+        let n = g === 'storm-drop' ? nm(p.n) : (p.m && (Array.isArray(p.m.n) ? nm(p.m.n[0]) : nm(p.m.n)));
+        if (n && out.names[g].length < 30 && !out.names[g].includes(n)) out.names[g].push(n);
+      }
+    }
     return send(res, 200, out);
   }
 
@@ -318,3 +350,11 @@ ensureReady()
   .then(() => console.log('Accounts stored in: ' + (store.kind === 'postgres' ? 'Postgres (DATABASE_URL)' : 'data/accounts.json (temporary on Render free — set DATABASE_URL to keep accounts)')))
   .catch((e) => console.error('Database setup failed:', errText(e)));
 server.listen(PORT, () => console.log('Bored Arcade running on port ' + PORT));
+
+// Optional: set KEEP_AWAKE=1 on Render to stop the free server from going to sleep after 15 idle minutes
+// (it pings itself every 10 minutes). Note: an always-awake free service uses ~720 of the 750 free hours a month.
+if (process.env.KEEP_AWAKE === '1' && process.env.RENDER_EXTERNAL_URL) {
+  const https = require('https');
+  setInterval(() => { https.get(process.env.RENDER_EXTERNAL_URL + '/health', (r) => r.resume()).on('error', () => {}); }, 10 * 60e3);
+  console.log('Keep-awake is on');
+}

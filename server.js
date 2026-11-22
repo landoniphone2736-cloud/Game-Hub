@@ -78,9 +78,27 @@ function makeFileStore() {
   };
 }
 
-function makePgStore(url) {
+// Accept the connection string however it was pasted: trims quotes/spaces, a leading "psql",
+// and drops URL options the Node driver doesn't need (we set SSL ourselves below).
+function cleanDbUrl(raw) {
+  let url = String(raw || '').trim().replace(/^psql\s+/i, '').replace(/^DATABASE_URL\s*=\s*/i, '').trim().replace(/^['"]|['"]$/g, '').trim();
+  try {
+    const u = new URL(url);
+    for (const k of ['sslmode', 'channel_binding', 'sslrootcert', 'options']) u.searchParams.delete(k);
+    url = u.toString();
+  } catch {}
+  return url;
+}
+
+function makePgStore(rawUrl) {
   const { Pool } = require('pg');
-  const pool = new Pool({ connectionString: url, ssl: /localhost|127\.0\.0\.1/.test(url) ? false : { rejectUnauthorized: false }, max: 5 });
+  const url = cleanDbUrl(rawUrl);
+  const local = /@(localhost|127\.0\.0\.1)[:/]/.test(url);
+  let host = '?';
+  try { host = new URL(url).hostname; } catch {}
+  console.log('Database host: ' + host);
+  const pool = new Pool({ connectionString: url, ssl: local ? false : { rejectUnauthorized: false }, max: 5, connectionTimeoutMillis: 15000, idleTimeoutMillis: 30000 });
+  pool.on('error', (e) => console.error('db pool error', e.message));
   const q = (text, params) => pool.query(text, params);
   return {
     kind: 'postgres',
@@ -118,6 +136,14 @@ function makePgStore(url) {
 }
 
 const store = process.env.DATABASE_URL ? makePgStore(process.env.DATABASE_URL) : makeFileStore();
+// Create the tables before the first account request (retries if the database was asleep or unreachable).
+let ready = null;
+function ensureReady() {
+  if (!ready) ready = store.init().catch((e) => { ready = null; throw e; });
+  return ready;
+}
+// short, safe error text for the player's screen (never includes the connection string)
+const errText = (e) => String((e && (e.message || e.code)) || 'unknown').replace(/postgres(ql)?:\/\/\S+/gi, '[db]').slice(0, 120);
 
 // ---------- helpers
 function hashPassword(password, salt) {
@@ -180,6 +206,8 @@ async function handleApi(req, res, url) {
   }
 
   if (req.method !== 'POST' && url !== '/api/me') return send(res, 405, { error: 'Method not allowed' });
+  try { await ensureReady(); }
+  catch (e) { console.error('Database setup failed:', errText(e)); return send(res, 503, { error: 'Database problem: ' + errText(e) }); }
 
   if (url === '/api/signup' || url === '/api/login') {
     if (limited(ipOf(req))) return send(res, 429, { error: 'Too many tries. Wait a few minutes and try again.' });
@@ -224,7 +252,7 @@ async function handleApi(req, res, url) {
 const server = http.createServer((req, res) => {
   const url = req.url.split('?')[0];
   if (url.startsWith('/api/')) {
-    handleApi(req, res, url).catch((e) => { console.error('api error', e.message); if (!res.headersSent) send(res, 500, { error: 'Server error, try again.' }); });
+    handleApi(req, res, url).catch((e) => { console.error('api error', errText(e)); if (!res.headersSent) send(res, 500, { error: 'Server error: ' + errText(e) }); });
     return;
   }
   if (url === '/favicon.ico') { res.writeHead(204); res.end(); }
@@ -286,7 +314,7 @@ setInterval(() => {
   for (const [, clients] of rooms) for (const [, c] of clients) { if (!c.alive) { c.terminate(); continue; } c.alive = false; try { c.ping(); } catch {} }
 }, 15000);
 
-store.init()
+ensureReady()
   .then(() => console.log('Accounts stored in: ' + (store.kind === 'postgres' ? 'Postgres (DATABASE_URL)' : 'data/accounts.json (temporary on Render free — set DATABASE_URL to keep accounts)')))
-  .catch((e) => console.error('Database setup failed:', e.message));
+  .catch((e) => console.error('Database setup failed:', errText(e)));
 server.listen(PORT, () => console.log('Bored Arcade running on port ' + PORT));

@@ -547,7 +547,7 @@ async function handleApi(req, res, url) {
       if (other.id === user.id) return send(res, 400, { error: "That's your own code!" });
       const r = await store.addFriend(user.id, other.id);
       sendToUserHubs(other.id, { t: 'fr', kind: r === 'accepted' ? 'accepted' : 'request', name: user.name });
-      if (r === 'accepted') statusChanged(user.id), lastStatus.delete(other.id), statusChanged(other.id);
+      if (r === 'accepted') { lastStatus.delete(user.id); statusChanged(user.id); }
       return send(res, 200, { result: r, name: other.name, ...(await friendsPayload(user.id)) }, cookie);
     }
     const id = int(b.id, 1, 1e9);

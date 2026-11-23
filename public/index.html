@@ -186,13 +186,44 @@ footer button{background:none;border:0;color:var(--dim);text-decoration:underlin
 @keyframes tin{from{transform:translateX(30px);opacity:0}}
 @media (max-width:860px){.social{grid-template-columns:1fr}}
 @media (max-width:560px){.grid{grid-template-columns:1fr}.brand img{width:60px;height:60px}.key{display:none}.chip{font-size:13px}#chatLog{height:300px}}
+/* ---------- Christmas theme (on from Nov 1 to Dec 31) ---------- */
+body.xmas{background:
+  radial-gradient(1100px 600px at 10% -10%,#7a1424 0,transparent 60%),
+  radial-gradient(900px 520px at 110% 5%,#0f5a3a 0,transparent 55%),
+  linear-gradient(180deg,#0b1026 0,#0e1630 60%,#0b1026 100%);background-attachment:fixed}
+body.xmas .logo{text-shadow:0 0 18px #ff3b4daa,0 0 42px #1fa35a88,3px 3px 0 #e8343a,6px 6px 0 #1d7a37}
+#snow{position:fixed;inset:0;pointer-events:none;z-index:0}
+.lights{position:fixed;left:0;right:0;top:0;height:34px;z-index:2;pointer-events:none;display:flex;justify-content:space-around;padding:0 10px}
+.lights::before{content:"";position:absolute;left:0;right:0;top:-8px;height:22px;border-bottom:2px solid #2b3a2b;border-radius:0 0 50% 50%/0 0 100% 100%}
+.lights i{position:relative;top:10px;width:11px;height:17px;border-radius:50% 50% 50% 50%/40% 40% 60% 60%;background:var(--c);box-shadow:0 2px 14px 3px var(--c);animation:twinkle 1.6s infinite;animation-delay:var(--d)}
+.lights i::before{content:"";position:absolute;top:-5px;left:2px;width:7px;height:6px;border-radius:2px;background:#3a3f3a}
+@keyframes twinkle{0%,100%{opacity:1}50%{opacity:.35;box-shadow:0 2px 4px 0 var(--c)}}
+.brand .hatwrap{position:relative;display:inline-block}
+.brand .hat{position:absolute;left:-14px;top:-30px;width:70px;transform:rotate(-18deg);filter:drop-shadow(0 3px 0 #0006);pointer-events:none}
+.xmasbar{margin:20px 0 0;display:flex;align-items:center;gap:18px;flex-wrap:wrap;padding:16px 20px;border-radius:18px;position:relative;overflow:hidden;
+  background:linear-gradient(90deg,#b3121bdd,#1d7a37dd);border:2px solid #ffffff3a;box-shadow:0 10px 30px #0006}
+.xmasbar::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(135deg,#ffffff10 0 14px,transparent 14px 28px);pointer-events:none}
+.xmasbar .tree{font-size:40px;line-height:1;filter:drop-shadow(0 3px 0 #0005)}
+.xmasbar .lbl{font:400 clamp(15px,2vw,20px) "Rubik Mono One",sans-serif;letter-spacing:.02em;text-shadow:2px 2px 0 #0006}
+.xmasbar .lbl small{display:block;font:600 14px Fredoka,sans-serif;letter-spacing:0;color:#ffe9b0;text-shadow:none;margin-top:2px}
+.xmasbar .cd{display:flex;gap:10px;margin-left:auto;position:relative}
+.xmasbar .u{min-width:72px;text-align:center;background:#0b1026cc;border:1px solid #ffffff2a;border-radius:12px;padding:8px 8px 6px}
+.xmasbar .u b{display:block;font:400 28px/1.1 "Rubik Mono One",sans-serif;color:#fff}
+.xmasbar .u span{font-size:12px;font-weight:600;color:#ffe9b0;text-transform:uppercase;letter-spacing:.06em}
+body.xmas .card{border-top-color:#ffffff55}
+body.xmas .card[data-game]::after{content:"";position:absolute;left:-2px;right:-2px;top:-9px;height:20px;pointer-events:none;z-index:3;
+  background:radial-gradient(circle at 10px 6px,#fff 9px,transparent 10px) 0 0/22px 20px repeat-x;filter:drop-shadow(0 2px 0 #c9dcf5)}
+body.xmas .card{position:relative}
+.xpick{background:#e8343a;color:#fff;border-radius:999px;padding:3px 10px;font-weight:700;font-size:12px;box-shadow:0 2px 0 #0006}
+@media (max-width:640px){.xmasbar .cd{margin-left:0;width:100%;justify-content:space-between}.xmasbar .u{min-width:0;flex:1}.xmasbar .u b{font-size:22px}}
+@media (prefers-reduced-motion:reduce){.lights i{animation:none}}
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
     <div>
-      <div class="brand"><img src="/img/arcade-256.png" alt=""><h1 class="logo">BORED<br>ARCADE</h1></div>
+      <div class="brand"><span class="hatwrap"><img src="/img/arcade-256.png" alt=""><svg class="hat" id="xhat" hidden viewBox="0 0 100 80" aria-hidden="true"><path d="M8 62 C20 20 50 2 78 10 C70 22 74 40 84 58 Z" fill="#e8343a"/><path d="M78 10 C88 14 94 22 92 30" stroke="#e8343a" stroke-width="10" fill="none" stroke-linecap="round"/><circle cx="92" cy="34" r="9" fill="#fff"/><rect x="2" y="56" width="88" height="18" rx="9" fill="#fff"/></svg></span><h1 class="logo">BORED<br>ARCADE</h1></div>
       <p class="sub">Games we made. Grab your friends and play, no downloads.</p>
     </div>
     <div class="acct">
@@ -206,6 +237,11 @@ footer button{background:none;border:0;color:var(--dim);text-decoration:underlin
     </div>
   </header>
 
+  <div class="xmasbar" id="xmasbar" hidden>
+    <div class="tree">🎄</div>
+    <div class="lbl" id="xLbl">Christmas is coming<small id="xSub">Countdown to December 25</small></div>
+    <div class="cd" id="xCd"><div class="u"><b id="xD">0</b><span>days</span></div><div class="u"><b id="xH">00</b><span>hours</span></div><div class="u"><b id="xM">00</b><span>min</span></div><div class="u"><b id="xS">00</b><span>sec</span></div></div>
+  </div>
   <div class="ann" id="ann" hidden><span class="megaphone">&#128227;</span><span class="txt" id="annText"></span><button id="annX" title="Hide">&times;</button></div>
 
   <div class="marquee"><span class="dot off" id="tdot"></span><span id="total">Checking who's online&hellip;</span></div>
@@ -617,6 +653,47 @@ footer button{background:none;border:0;color:var(--dim);text-decoration:underlin
   $('chatForm').onsubmit=e=>{e.preventDefault();const t=$('chatIn').value.trim();if(!t||!ws||ws.readyState!==1)return;ws.send(JSON.stringify({t:'chat',text:t}));$('chatIn').value='';sfx.send();};
 
   refreshMe();
+})();
+</script>
+<script>
+/* Christmas theme + countdown: on automatically from Nov 1 to Dec 31 */
+(function(){
+  const now = new Date(), m = now.getMonth();
+  if (m !== 10 && m !== 11) return;
+  document.body.classList.add('xmas');
+  document.getElementById('xhat').removeAttribute('hidden');
+  document.getElementById('xmasbar').hidden = false;
+  const L = document.createElement('div'); L.className = 'lights'; L.setAttribute('aria-hidden','true');
+  const cols = ['#ff3b4d','#3dff7a','#ffd84a','#38c6ff','#ff7ad9'];
+  const n = Math.max(12, Math.round(innerWidth/60));
+  for (let i=0;i<n;i++){ const b = document.createElement('i'); b.style.setProperty('--c', cols[i%cols.length]); b.style.setProperty('--d', (i%5)*.3+'s'); L.appendChild(b); }
+  document.body.prepend(L);
+  // countdown to Dec 25, midnight local time
+  const pad = v => String(v).padStart(2,'0'), $ = id => document.getElementById(id);
+  function tick(){
+    const t = new Date(), y = t.getFullYear();
+    if (t.getMonth() === 11 && t.getDate() === 25){ $('xLbl').innerHTML = 'Merry Christmas! 🎅<small>Happy holidays from Bored Arcade</small>'; $('xCd').hidden = true; return; }
+    let target = new Date(y, 11, 25); if (t > target) target = new Date(y+1, 11, 25);
+    let d = Math.max(0, Math.floor((target - t)/1000));
+    const days = Math.floor(d/86400); d %= 86400;
+    $('xD').textContent = days; $('xH').textContent = pad(Math.floor(d/3600)); $('xM').textContent = pad(Math.floor(d%3600/60)); $('xS').textContent = pad(d%60);
+    $('xLbl').firstChild.textContent = days === 0 ? "It's Christmas Eve!" : 'Christmas is coming';
+  }
+  tick(); setInterval(tick, 1000);
+  // falling snow
+  const cv = document.createElement('canvas'); cv.id = 'snow'; document.body.prepend(cv);
+  const g = cv.getContext('2d'); let W, H, flakes = [];
+  const size = () => { W = cv.width = innerWidth; H = cv.height = innerHeight; const want = Math.round(W*H/9000); while (flakes.length < want) flakes.push({x:Math.random()*W, y:Math.random()*H, r:Math.random()*2.4+.6, s:Math.random()*.6+.3, w:Math.random()*6}); flakes.length = want; };
+  addEventListener('resize', size); size();
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  (function frame(){
+    g.clearRect(0,0,W,H); g.fillStyle = 'rgba(255,255,255,.85)';
+    for (const f of flakes){ f.y += f.s; f.w += .01; f.x += Math.sin(f.w)*.35; if (f.y > H+4){ f.y = -4; f.x = Math.random()*W; } g.beginPath(); g.arc(f.x, f.y, f.r, 0, 6.283); g.fill(); }
+    requestAnimationFrame(frame);
+  })();
+  // spotlight the Christmas game
+  const sr = document.querySelector('.card[data-game="sleigh-rider"] .badges');
+  if (sr){ const b = document.createElement('div'); b.className = 'xpick'; b.textContent = '🎄 Christmas pick'; sr.appendChild(b); }
 })();
 </script>
 </body>

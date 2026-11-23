@@ -417,18 +417,30 @@ let sleighLock = Promise.resolve();
 setInterval(() => { const t = Date.now(); for (const [k, a] of sleighHits) if (t - a.start > 60e3) sleighHits.delete(k); }, 60e3);
 async function sleighScores(req, res) {
   try { await ensureReady(); } catch (e) { return send(res, 503, { error: 'Leaderboard is unavailable right now.' }); }
-  const board = async () => (await store.getKV(SLEIGH_KEY)) || [];
+  // daily challenge boards are one per day (Eastern time), e.g. sleigh_daily_2026-11-23
+  const dayOf = (d) => { try { return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d); } catch { return d.toISOString().slice(0, 10); } };
+  const today = dayOf(new Date()), yesterday = dayOf(new Date(Date.now() - 86400e3));
+  let qs; try { qs = new URL(req.url, 'http://x').searchParams; } catch { qs = new URLSearchParams(); }
+  let body = null;
+  if (req.method === 'POST') { try { body = await readBody(req, 2048); } catch { return send(res, 400, { error: 'Bad request' }); } }
+  const src = body || { mode: qs.get('mode'), day: qs.get('day') };
+  const daily = src.mode === 'daily';
+  let day = today;
+  if (daily && (src.day === today || src.day === yesterday)) day = src.day;
+  else if (daily && req.method === 'POST') return send(res, 400, { error: "That daily challenge is over. Try today's!" });
+  const KEY = daily ? 'sleigh_daily_' + day : SLEIGH_KEY;
+  const board = async () => (await store.getKV(KEY)) || [];
   const pub = (list) => list.slice(0, 25).map((r) => ({ name: r.name, score: r.score, dist: r.dist, v: r.v ? 1 : 0, ts: r.ts }));
-  if (req.method === 'GET') return send(res, 200, { top: pub(await board()), total: (await board()).length });
+  if (req.method === 'GET') { const l = await board(); return send(res, 200, { top: pub(l), total: l.length, day: daily ? day : null }); }
   if (req.method !== 'POST') return send(res, 405, { error: 'Method not allowed' });
   const ip = ipOf(req), t = Date.now();
   let a = sleighHits.get(ip); if (!a || t - a.start > 60e3) { a = { start: t, n: 0 }; sleighHits.set(ip, a); }
   if (++a.n > 12) return send(res, 429, { error: 'Too many scores at once. Try again in a minute.' });
-  let b; try { b = await readBody(req, 2048); } catch { return send(res, 400, { error: 'Bad request' }); }
-  const score = Math.floor(Number(b.score)), dist = Math.floor(Number(b.dist)), gifts = Math.floor(Number(b.gifts)), secs = Number(b.secs), air = Math.floor(Number(b.air) || 0);
+  const b = body;
+  const score = Math.floor(Number(b.score)), dist = Math.floor(Number(b.dist)), gifts = Math.floor(Number(b.gifts)), secs = Number(b.secs), air = Math.floor(Number(b.air) || 0), gates = Math.floor(Number(b.gates) || 0);
   // sanity checks: top speed is 60 m/s, gifts are worth 10, stars at most double distance, big air at most 50 a jump
   const ok = [score, dist, gifts, secs].every(Number.isFinite) && score > 0 && dist >= 0 && gifts >= 0 && secs > 0 && secs < 6 * 3600
-    && dist <= secs * 62 + 50 && gifts <= dist / 4 + 20 && score <= dist * 2 + gifts * 20 + air * 50 + 10 && air <= secs;
+    && dist <= secs * 62 + 50 && gifts <= dist / 4 + 20 && score <= dist * 2 + gifts * 20 + air * 50 + gates * 30 + 10 && air <= secs && gates >= 0 && gates <= dist / 10 + 5;
   if (!ok) return send(res, 400, { error: 'That score did not add up.' });
   let user = null; try { user = await authUser(req); } catch {}
   const name = user ? cleanName(user.name) : String(b.name || '').replace(/[^\w \-.]/g, '').trim().slice(0, 14);
@@ -445,12 +457,12 @@ async function sleighScores(req, res) {
       list.push({ name, score, dist, gifts, v: user ? 1 : 0, uid: user ? user.id : null, ts: Date.now() });
       list.sort((x, y) => y.score - x.score);
       if (list.length > 200) list.length = 200;
-      await store.setKV(SLEIGH_KEY, list);
+      await store.setKV(KEY, list);
       best = true;
     }
     const rank = list.findIndex((r) => r.name.toLowerCase() === key) + 1;
     const runRank = list.filter((r) => r.score > score).length + 1;
-    result = { ok: true, best, rank, runRank, name, verified: !!user, top: pub(list), total: list.length };
+    result = { ok: true, best, rank, runRank, name, verified: !!user, top: pub(list), total: list.length, day: daily ? day : null };
   }).catch((e) => { result = { error: 'Could not save: ' + errText(e) }; });
   await sleighLock;
   return send(res, result.error ? (result.taken ? 409 : 500) : 200, result);

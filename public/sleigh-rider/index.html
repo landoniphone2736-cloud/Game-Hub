@@ -116,6 +116,20 @@ body.touch #speed{display:none}
 .sitem small{color:#cfe0ff}
 .sitem.locked{opacity:.75}
 #shopGifts{font-size:18px}
+.tabs{display:flex;gap:6px;margin:0 0 8px}
+.tabs button{flex:1;padding:8px;border-radius:10px;background:#ffffff12;color:#cfe0ff;font-weight:600;font-size:14px}
+.tabs button.on{background:#ffd54a;color:#4a2c00}
+.mis{list-style:none;margin:6px 0}
+.mis li{background:#ffffff0c;border-radius:12px;padding:9px 11px;margin:6px 0;font-size:15px;text-align:left}
+.mis li .top{display:flex;justify-content:space-between;gap:8px}
+.mis li .rw{color:#ffd54a;font-weight:700;white-space:nowrap}
+.mis li .bar{height:6px;border-radius:4px;background:#ffffff1c;margin-top:6px;overflow:hidden}
+.mis li .bar i{display:block;height:100%;background:linear-gradient(90deg,#2fa84f,#6fe39a)}
+.mis li.done{outline:2px solid #6fe39a99;background:#2fa84f26}
+.mis li.done .bar i{background:#ffd54a}
+#dailyTag{position:absolute;left:50%;top:58px;transform:translateX(-50%);background:#e8343a;color:#fff;font-weight:700;border-radius:999px;padding:4px 12px;font-size:14px;box-shadow:0 3px 0 #0005}
+#toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%) translateY(20px);background:#1d7a37;color:#fff;font-weight:700;padding:12px 18px;border-radius:14px;box-shadow:0 8px 24px #0008;opacity:0;transition:.3s;z-index:20;pointer-events:none;white-space:nowrap}
+#toast.on{opacity:1;transform:translateX(-50%)}
 #loading{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;font-size:22px;z-index:30;background:#0d1b3d}
 #snowfx{position:fixed;inset:0;pointer-events:none;z-index:9}
 @media (max-width:600px){#score{font-size:36px}.keys{grid-template-columns:1fr}#hint{font-size:20px;white-space:normal;width:86vw}}
@@ -132,9 +146,11 @@ body.touch #speed{display:none}
   <div id="speed">Speed <span id="kmh">0</span> km/h<div class="bar"><i id="spbar"></i></div></div>
   <div id="hint" style="opacity:0"></div>
   <div id="pop"></div>
+  <div id="dailyTag" class="hide">📅 DAILY CHALLENGE</div>
   <button id="pauseBtn" title="Pause (P)">❚❚</button>
 </div>
 
+<div id="toast"></div>
 <div id="touch"><div class="tz" id="tL"></div><div class="tz" id="tR"></div><button id="tJump">JUMP</button></div>
 
 <!-- main menu -->
@@ -145,14 +161,18 @@ body.touch #speed{display:none}
       <p class="sub">Ride the endless hill. Dodge, jump, grab gifts.</p>
       <div class="stats"><div><b id="mBest">0</b>Best score</div><div><b id="mGifts">0</b>Gifts</div></div>
       <button class="btn" id="playBtn">▶ RIDE!</button>
+      <button class="btn red small" id="dailyBtn">📅 Daily Challenge <span id="dailyBest" style="opacity:.85;font-weight:600"></span></button>
       <div class="row"><button class="btn blue small" id="tutBtn">🎮 How to play</button><button class="btn gold small" id="shopBtn">🛷 Sleighs</button></div>
       <div class="toggles"><button id="musBtn">🎵 Music</button><button id="sfxBtn">🔔 Sounds</button></div>
       <div style="text-align:center"><a class="back" id="backArcade" href="/">← Back to Bored Arcade</a></div>
     </div>
     <div class="card side">
       <h2>🏆 Top Riders</h2>
+      <div class="tabs"><button id="tabAll" class="on">All-time</button><button id="tabDaily">Today's Daily</button></div>
       <ol class="lb" id="lbMenu"><li class="muted">Loading…</li></ol>
       <p class="muted" id="lbNote"></p>
+      <h2 style="margin-top:14px">🎯 Missions</h2>
+      <ul class="mis" id="misMenu"></ul>
     </div>
   </div>
 </div>
@@ -175,7 +195,9 @@ body.touch #speed{display:none}
       <span>🌲 ⛄ Trees &amp; snowmen: <b>go around</b></span>
       <span>🪵 🪨 🚧 Logs, rocks, fences: <b>jump</b></span>
       <span>🛝 Ramps: big air bonus</span>
-      <span>🧊 Ice: slippery!</span>
+      <span>🧊 Ice &amp; frozen ponds: slippery!</span>
+      <span>🍭 Candy cane gates: ride between the poles for +15</span>
+      <span>🐧 Penguins slide across: jump or dodge</span>
       <span>🎁 Gifts: +10 points, buy sleighs</span>
       <span>🛡️ Shield: survive one crash</span>
       <span>🧲 Magnet: pulls in gifts</span>
@@ -217,6 +239,7 @@ body.touch #speed{display:none}
     <div class="stats"><div><b id="oDist">0</b>meters</div><div><b id="oGifts">0</b>gifts</div><div><b id="oAir">0</b>big airs</div></div>
     <div id="nameRow" class="hide"><input id="nameIn" maxlength="14" placeholder="Your name for the leaderboard"><button class="btn small" id="nameGo">Submit</button></div>
     <div id="rankMsg" class="muted"></div>
+    <ul class="mis" id="misOver"></ul>
     <ol class="lb" id="lbOver" style="text-align:left"></ol>
     <button class="btn" id="againBtn">↻ Ride again</button>
     <button class="btn blue small" id="menuBtn">Menu</button>
@@ -511,6 +534,33 @@ function makePower(kind){
   else { const sh = new THREE.Shape(); for (let i=0;i<10;i++){ const a = Math.PI/2 + i*Math.PI/5, r = i%2 ? .25 : .6; i ? sh.lineTo(Math.cos(a)*r, Math.sin(a)*r) : sh.moveTo(Math.cos(a)*r, Math.sin(a)*r); } const m = new THREE.Mesh(new THREE.ExtrudeGeometry(sh, {depth:.2, bevelEnabled:false}), MAT.gold); m.position.z = -.1; g.add(m); }
   return g;
 }
+function makePond(){
+  const g = new THREE.Group();
+  const geo = facet(new THREE.CircleGeometry(1, 11), 0); const m = new THREE.Mesh(geo, new THREE.MeshPhongMaterial({color:0x7cc6ec, shininess:80, flatShading:true}));
+  m.rotation.x = -Math.PI/2; m.scale.set(5.4, 9, 1); m.position.y = .04; g.add(m);
+  const rim = new THREE.Mesh(facet(new THREE.RingGeometry(.92, 1.08, 11)), M(0xf2fbff)); rim.rotation.x = -Math.PI/2; rim.scale.set(5.4, 9, 1); rim.position.y = .05; g.add(rim);
+  const crack = M(0xeaf8ff); for (let i=0;i<5;i++){ const c = mesh(G.box, crack, rand(-2.5, 2.5), .06, rand(-5, 5), .08, .01, rand(1.5, 3.5)); c.rotation.y = rand(0, 3); g.add(c); }
+  return g;
+}
+function makeGate(){
+  const g = new THREE.Group(), red = MAT.red, wht = MAT.white;
+  for (const s of [-1.9, 1.9]){
+    for (let k=0;k<7;k++) g.add(mesh(G.cyl, k%2 ? wht : red, s, .25 + k*.42, 0, .14, .42, .14));
+    g.add(mesh(G.sphS, MAT.gold, s, 3.2, 0, .22, .22, .22));
+  }
+  const ban = mesh(G.box, red, 0, 2.95, 0, 3.6, .5, .08); g.add(ban);
+  for (let k=-3;k<=3;k++) g.add(mesh(G.box, wht, k*.5, 2.95, .05, .18, .5, .02));
+  return g;
+}
+function makePenguin(){
+  const g = new THREE.Group(), body = new THREE.Group(), blk = M(0x1d2433), org = M(0xff9a1a);
+  body.add(mesh(G.sph, blk, 0, .32, 0, .34, .32, .62)); body.add(mesh(G.sph, MAT.white, 0, .2, -.02, .27, .2, .52));
+  body.add(mesh(G.sph, blk, 0, .4, -.62, .22, .21, .22)); body.add(mesh(G.sph, MAT.white, .08, .45, -.8, .05, .05, .03)); body.add(mesh(G.sph, MAT.white, -.08, .45, -.8, .05, .05, .03));
+  const bk = mesh(new THREE.ConeGeometry(.07, .2, 5), org, 0, .36, -.86); bk.rotation.x = -Math.PI/2; body.add(bk);
+  for (const s of [-1,1]){ const f = mesh(G.box, blk, s*.36, .28, -.05, .06, .06, .4); f.rotation.z = s*.5; body.add(f); body.add(mesh(G.box, org, s*.1, .2, .62, .09, .04, .16)); }
+  body.name = 'pbody'; g.add(body);
+  return g;
+}
 function makeSnowball(){ const g = new THREE.Group(); g.add(mesh(G.sph, MAT.snow, 0, 1.2, 0, 1.2, 1.2, 1.2)); return g; }
 
 /* ---------- sleighs ---------- */
@@ -599,6 +649,13 @@ function makeSleigh(id){
   return g;
 }
 
+/* ---------------- daily challenge: same hill for everyone, from a seed made from today's date ---------------- */
+const dayKey = () => { try { return new Intl.DateTimeFormat('en-CA', {timeZone:'America/New_York', year:'numeric', month:'2-digit', day:'2-digit'}).format(new Date()); } catch(e){ return new Date().toISOString().slice(0,10); } };
+function seeded(str){ let h = 1779033703 ^ str.length; for (let i=0;i<str.length;i++){ h = Math.imul(h ^ str.charCodeAt(i), 3432918353); h = h << 13 | h >>> 19; } let a = h >>> 0;
+  return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+let R = Math.random, mode = 'normal', runDay = '';
+const rr = (a,b) => a + R()*(b-a), rp = a => a[Math.floor(R()*a.length)];
+
 /* ---------------- game state ---------------- */
 const TRACK = 13.2;
 const CAM = {sled:[1.75, 2.85], toboggan:[1.95, 3.3], candy:[1.9, 3.2], santa:[3.2, 5], ice:[3.1, 4.8], gold:[3.2, 5], reindeer:[3.4, 5.4], rocket:[2.3, 4.1]};         // half width of the run
@@ -630,6 +687,9 @@ function getObj(type){
       case 'gift': m = makeGift(false); break;
       case 'gold': m = makeGift(true); break;
       case 'snowball': m = makeSnowball(); break;
+      case 'pond': m = makePond(); break;
+      case 'gate': m = makeGate(); break;
+      case 'penguin': m = makePenguin(); break;
       default: m = makePower(type);
     }
     o = {type, m, active:false}; p.push(o); scene.add(m);
@@ -640,7 +700,7 @@ function getObj(type){
 const DEF = { // hit box: half width (x), half depth (z), height you have to clear; kind
   tree:{w:1.1, d:1.1, h:99, k:'crash'}, ltree:{w:1.1, d:1.1, h:99, k:'crash'}, snowman:{w:.85, d:.85, h:99, k:'crash'},
   rock:{w:1.15, d:.9, h:1.05, k:'crash'}, stump:{w:.6, d:.6, h:.85, k:'crash'}, root:{w:1.3, d:.5, h:.75, k:'crash'}, log:{w:2.2, d:.45, h:.8, k:'crash'}, fence:{w:2.75, d:.2, h:1.05, k:'crash'},
-  ramp:{w:1.7, d:2, h:0, k:'ramp'}, ice:{w:2.4, d:3.4, h:0, k:'ice'}, gift:{w:.85, d:.85, h:99, k:'gift'}, gold:{w:.9, d:.9, h:99, k:'gold'},
+  ramp:{w:1.7, d:2, h:0, k:'ramp'}, pond:{w:4.6, d:8.2, h:0, k:'pond'}, gate:{w:2.1, d:.25, h:0, k:'gate'}, penguin:{w:.55, d:.7, h:.7, k:'crash'}, ice:{w:2.4, d:3.4, h:0, k:'ice'}, gift:{w:.85, d:.85, h:99, k:'gift'}, gold:{w:.9, d:.9, h:99, k:'gold'},
   shield:{w:.9, d:.9, h:99, k:'power'}, magnet:{w:.9, d:.9, h:99, k:'power'}, star:{w:.9, d:.9, h:99, k:'power'}, snowball:{w:1.2, d:1.2, h:2.1, k:'crash'},
 };
 function place(type, x, z, extra){
@@ -654,53 +714,70 @@ function place(type, x, z, extra){
 function freeObj(o){ o.active = false; o.m.visible = false; }
 
 /* ---------- level generation: rows of obstacles with a guaranteed open lane ---------- */
-function difficulty(){ return clamp(dist/2600, 0, 1); }
+let runZ0 = 0;
+function rowDist(z){ return Math.max(0, runZ0 - z - 240); }
 function spawnRow(z){
-  const d = difficulty();
-  const r = Math.random();
+  const rd = rowDist(z), d = clamp(rd/2600, 0, 1);
+  const r = R();
   // the safe lane we always leave open
-  const safe = rand(-TRACK+2.2, TRACK-2.2);
-  const pickX = (gap) => { for (let i=0;i<20;i++){ const x = rand(-TRACK+1, TRACK-1); if (Math.abs(x - safe) > gap) return x; } return null; };
+  const safe = rr(-TRACK+2.2, TRACK-2.2);
+  const pickX = (gap) => { for (let i=0;i<20;i++){ const x = rr(-TRACK+1, TRACK-1); if (Math.abs(x - safe) > gap) return x; } return null; };
   if (r < .12 + d*.05){ // log or fence across part of the track (jump it)
-    const type = Math.random() < .5 ? 'log' : 'fence', w = DEF[type].w*2;
-    const n = 1 + (Math.random() < d ? 1 : 0);
-    for (let i=0;i<n;i++){ const x = clamp(rand(-TRACK+w/2, TRACK-w/2), -TRACK+w/2, TRACK-w/2); place(type, x, z + i*.1); }
-    if (Math.random() < .6) for (let i=0;i<3;i++) place('gift', safe, z - 4 - i*2.2);
+    const type = R() < .5 ? 'log' : 'fence', w = DEF[type].w*2;
+    const n = 1 + (R() < d ? 1 : 0);
+    for (let i=0;i<n;i++){ const x = clamp(rr(-TRACK+w/2, TRACK-w/2), -TRACK+w/2, TRACK-w/2); place(type, x, z + i*.1); }
+    if (R() < .6) for (let i=0;i<3;i++) place('gift', safe, z - 4 - i*2.2);
     return 16;
   }
   if (r < .2){ // ramp with gifts in the air
-    const x = rand(-TRACK+3, TRACK-3); place('ramp', x, z);
-    for (let i=0;i<5;i++) place(Math.random() < .12 ? 'gold' : 'gift', x, z - 9 - i*2.6, {y: 3.2 + Math.sin(i/4*Math.PI)*2.2});
-    const n = 1 + Math.floor(d*3); for (let i=0;i<n;i++){ const x2 = pickX(4); if (x2 != null && Math.abs(x2 - x) > 4) place(pick(['tree','rock','snowman']), x2, z + rand(-3,3)); }
+    const x = rr(-TRACK+3, TRACK-3); place('ramp', x, z);
+    for (let i=0;i<5;i++) place(R() < .12 ? 'gold' : 'gift', x, z - 9 - i*2.6, {y: 3.2 + Math.sin(i/4*Math.PI)*2.2});
+    const n = 1 + Math.floor(d*3); for (let i=0;i<n;i++){ const x2 = pickX(4); if (x2 != null && Math.abs(x2 - x) > 4) place(rp(['tree','rock','snowman']), x2, z + rr(-3,3)); }
     return 22;
   }
   if (r < .28){ // gift trail weaving through
-    const x0 = rand(-TRACK+3, TRACK-3);
-    for (let i=0;i<8;i++) place(i === 7 && Math.random() < .3 ? 'gold' : 'gift', clamp(x0 + Math.sin(i*.6)*3, -TRACK+1, TRACK-1), z - i*2.4);
-    const n = Math.floor(d*3); for (let i=0;i<n;i++){ const x2 = pickX(3); if (x2 != null && Math.abs(x2 - x0) > 5) place('tree', x2, z - rand(0, 16)); }
+    const x0 = rr(-TRACK+3, TRACK-3);
+    for (let i=0;i<8;i++) place(i === 7 && R() < .3 ? 'gold' : 'gift', clamp(x0 + Math.sin(i*.6)*3, -TRACK+1, TRACK-1), z - i*2.4);
+    const n = Math.floor(d*3); for (let i=0;i<n;i++){ const x2 = pickX(3); if (x2 != null && Math.abs(x2 - x0) > 5) place('tree', x2, z - rr(0, 16)); }
     return 22;
   }
   if (r < .34 && d > .15){ // ice patch
-    place('ice', rand(-TRACK+3, TRACK-3), z);
-    const x2 = pickX(3); if (x2 != null) place(pick(['rock','snowman']), x2, z - 6);
+    place('ice', rr(-TRACK+3, TRACK-3), z);
+    const x2 = pickX(3); if (x2 != null) place(rp(['rock','snowman']), x2, z - 6);
     return 14;
   }
   if (r < .38 && d > .35){ // rolling snowball crossing the run
-    const s = Math.random() < .5 ? -1 : 1; place('snowball', s*(TRACK+4), z - 30, {vx: -s*rand(5, 8)});
+    const s = R() < .5 ? -1 : 1; place('snowball', s*(TRACK+4), z - 30, {vx: -s*rr(5, 8)});
     return 12;
   }
+  if (r < .45 && rd > 250){ // candy cane slalom gates
+    const n = 3 + Math.floor(d*2); let x = rr(-6, 6);
+    for (let i=0;i<n;i++){ place('gate', x, z - i*16); if (R() < .7) place('gift', x, z - i*16 - 2); const off = (i%2 ? 1 : -1)*rr(3.5, 7); const tx = clamp(x + off, -TRACK+2.5, TRACK-2.5); if (d > .3 && R() < .6) place(rp(['tree','snowman']), clamp(x + (x > 0 ? -5.5 : 5.5), -TRACK+1, TRACK-1), z - i*16 - 7); x = tx; }
+    return n*16 + 6;
+  }
+  if (r < .5 && rd > 400){ // frozen pond
+    const x = rr(-TRACK+5, TRACK-5); place('pond', x, z);
+    for (let i=0;i<4;i++) place('gift', x + rr(-2, 2), z - 3 - i*3.5);
+    const x2 = clamp(x + (R() < .5 ? -1 : 1)*rr(4, 7), -TRACK+1, TRACK-1); if (d > .25) place(rp(['rock','stump','snowman']), x2, z - 20);
+    return 26;
+  }
+  if (r < .55 && rd > 300){ // penguins sliding across
+    const sd = R() < .5 ? -1 : 1, n = 1 + Math.floor(rr(0, 1 + d*2.5)), v = rr(4.5, 7 + d*3);
+    for (let i=0;i<n;i++) place('penguin', sd*(TRACK + 3 + i*2.2), z - 28 - i*.6, {vx: -sd*v});
+    return 14;
+  }
   // scattered obstacles
-  const n = 2 + Math.floor(rand(0, 2 + d*4));
+  const n = 2 + Math.floor(rr(0, 2 + d*4));
   for (let i=0;i<n;i++){
     const x = pickX(2.6); if (x == null) continue;
-    const t = Math.random(), type = t < .42 ? (Math.random() < .2 ? 'ltree' : 'tree') : t < .55 ? 'snowman' : t < .7 ? 'rock' : t < .8 ? 'stump' : t < .9 ? 'root' : 'log';
+    const t = R(), type = t < .42 ? (R() < .2 ? 'ltree' : 'tree') : t < .55 ? 'snowman' : t < .7 ? 'rock' : t < .8 ? 'stump' : t < .9 ? 'root' : 'log';
     if (type === 'log' && Math.abs(x - safe) < 5.2) continue;
-    place(type, clamp(x, -TRACK+1.2, TRACK-1.2), z + rand(-2.5, 2.5));
+    place(type, clamp(x, -TRACK+1.2, TRACK-1.2), z + rr(-2.5, 2.5));
   }
-  const pr = Math.random();
-  if (pr < .5) place('gift', safe, z + rand(-3, 3));
-  else if (pr < .56 && dist > 150) place(pick(['shield','magnet','star']), safe, z);
-  return lerp(15, 8.5, d) + rand(-1.5, 1.5);
+  const pr = R();
+  if (pr < .5) place('gift', safe, z + rr(-3, 3));
+  else if (pr < .56 && rd > 150) place(rp(['shield','magnet','star']), safe, z);
+  return lerp(15, 8.5, d) + rr(-1.5, 1.5);
 }
 // scripted intro for the first ride, teaching the controls
 function introRows(z0){
@@ -716,10 +793,11 @@ function introRows(z0){
 /* ---------------- run control ---------------- */
 function resetWorld(){
   for (const o of objs) freeObj(o); objs.length = 0;
-  const z0 = P.z;
+  const z0 = P.z; runZ0 = z0;
   Object.assign(P, {x:0, y:0, vx:0, vy:0, speed:14, air:false, tilt:0, dead:false, ice:0, shield:0, magnet:0, star:0, inv:0, airT:0, rampAir:false});
-  runT = 0; dist = 0; gifts = 0; score = 0; airs = 0; deadT = 0;
-  scripted = save.tut && save.runs > 0 ? [] : introRows(z0);
+  runT = 0; dist = 0; gifts = 0; score = 0; airs = 0; deadT = 0; RS = {gifts:0, dist:0, air:0, nojump:0, gates:0, power:0, lastJumpD:0}; runDone = [];
+  R = mode === 'daily' ? seeded('sleigh-' + runDay) : Math.random;
+  scripted = mode === 'daily' || (save.tut && save.runs > 0) ? [] : introRows(z0);
   nextRow = z0 + (scripted.length ? -340 : -60);
   for (const s of scripted) s.f(), s.done = false;
   while (nextRow > z0 - 230) nextRow -= spawnRow(nextRow);
@@ -731,7 +809,9 @@ function setSleigh(id){
   if (!shieldBubble){ shieldBubble = new THREE.Mesh(facet(new THREE.IcosahedronGeometry(1.15, 1)), MAT.shield); scene.add(shieldBubble); }
   shieldBubble.visible = false;
 }
-function startRun(){
+function startRun(m){
+  if (m) mode = m; if (mode === 'daily') runDay = dayKey();
+  $('#dailyTag').classList.toggle('hide', mode !== 'daily');
   Audio.init(); Audio.startMusic(); Audio.duck(.32);
   resetWorld(); state = 'play'; document.body.classList.add('playing');
   show(null); $('#hud').classList.remove('hide');
@@ -754,14 +834,72 @@ function endRun(){
   state = 'over'; document.body.classList.remove('playing'); score = Math.floor(score);
   save.runs++; save.tut = true;
   save.gifts += gifts;
-  const newBest = score > save.best; if (newBest) save.best = score;
+  missionsAtEnd();
+  let newBest = false;
+  if (mode === 'daily'){ if (!save.daily || save.daily.day !== runDay) save.daily = {day:runDay, best:0}; if (score > save.daily.best){ save.daily.best = score; newBest = true; } }
+  else { newBest = score > save.best; if (newBest) save.best = score; }
   persist();
   $('#oScore').textContent = score.toLocaleString(); $('#oDist').textContent = Math.floor(dist).toLocaleString(); $('#oGifts').textContent = gifts; $('#oAir').textContent = airs;
-  $('#oNew').classList.toggle('hide', !newBest);
+  $('#oNew').classList.toggle('hide', !newBest); $('#oNew').textContent = mode === 'daily' ? '⭐ New daily best!' : '⭐ New best!';
+  $('#misOver').innerHTML = missionHtml(); ensureMissions();
   $('#lbOver').innerHTML = ''; $('#rankMsg').textContent = '';
   show('#over'); $('#hud').classList.add('hide');
   submitScore();
 }
+
+/* ---------------- missions ---------------- */
+const MISSIONS = {
+  gifts:{t:n => `Grab ${n} gifts in one run`, tiers:[15, 30, 50, 80, 120], run:1},
+  dist:{t:n => `Ride ${n.toLocaleString()} m in one run`, tiers:[500, 1000, 2000, 3500, 5000, 7500], run:1},
+  air:{t:n => `Get ${n} big airs in one run`, tiers:[2, 4, 6, 9, 12], run:1},
+  nojump:{t:n => `Ride ${n.toLocaleString()} m without jumping`, tiers:[250, 500, 900, 1400, 2000], run:1},
+  gates:{t:n => `Ride through ${n} candy cane gates in one run`, tiers:[3, 6, 10, 15, 22], run:1},
+  power:{t:n => `Pick up ${n} power-ups in one run`, tiers:[2, 3, 5, 7, 10], run:1},
+  total:{t:n => `Collect ${n.toLocaleString()} gifts in total`, tiers:[100, 250, 500, 1000, 2000], run:0},
+  runs:{t:n => `Finish ${n} runs`, tiers:[3, 5, 10, 20, 40], run:0},
+  daily:{t:n => n > 1 ? `Play the Daily Challenge on ${n} different days` : 'Play today\'s Daily Challenge', tiers:[1, 3, 5, 7, 14], run:0},
+};
+let RS = {}, runDone = [];
+function newMission(exclude){
+  save.mtier = save.mtier || {};
+  const types = Object.keys(MISSIONS).filter(k => !exclude.includes(k) && (save.mtier[k]||0) < MISSIONS[k].tiers.length);
+  const type = types.length ? types[Math.floor(Math.random()*types.length)] : 'dist';
+  const tier = Math.min(save.mtier[type]||0, MISSIONS[type].tiers.length-1);
+  return {type, n:MISSIONS[type].tiers[tier], prog:0, reward:25 + tier*25 + (type === 'daily' ? 25 : 0), done:false};
+}
+function ensureMissions(){
+  save.missions = (save.missions || []).filter(m => MISSIONS[m.type]);
+  for (let i=save.missions.length-1;i>=0;i--) if (save.missions[i].done){ save.missions.splice(i, 1); }
+  while (save.missions.length < 3) save.missions.push(newMission(save.missions.map(m => m.type)));
+  persist();
+}
+function completeMission(m){
+  m.done = true; m.prog = m.n; save.gifts += m.reward;
+  save.mtier = save.mtier || {}; save.mtier[m.type] = (save.mtier[m.type]||0) + 1;
+  toast(`🎯 Mission complete! +${m.reward} 🎁`); Audio.gold(); persist();
+}
+function checkMissions(){
+  for (const m of save.missions){
+    if (m.done || !MISSIONS[m.type].run) continue;
+    const v = Math.floor(RS[m.type] || 0);
+    if (v > m.prog) m.prog = Math.min(v, m.n);
+    if (v >= m.n) completeMission(m);
+  }
+}
+function missionsAtEnd(){
+  for (const m of save.missions){
+    if (m.done) continue;
+    if (m.type === 'total') m.prog = Math.min(m.n, (m.prog||0) + gifts);
+    if (m.type === 'runs') m.prog = Math.min(m.n, (m.prog||0) + 1);
+    if (m.type === 'daily' && mode === 'daily'){ save.dailyDays = save.dailyDays || []; if (!save.dailyDays.includes(runDay)) save.dailyDays.push(runDay); m.prog = Math.min(m.n, save.dailyDays.length); }
+    if (!MISSIONS[m.type].run && m.prog >= m.n) completeMission(m);
+  }
+}
+function missionHtml(){
+  return save.missions.map(m => `<li class="${m.done ? 'done' : ''}"><div class="top"><span>${m.done ? '✅ ' : ''}${MISSIONS[m.type].t(m.n)}</span><span class="rw">+${m.reward} 🎁</span></div><div class="bar"><i style="width:${Math.min(100, (m.prog||0)/m.n*100)}%"></i></div></li>`).join('');
+}
+let toastT = 0;
+function toast(t){ const el = $('#toast'); el.textContent = t; el.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('on'), 2400); }
 
 /* ---------------- input ---------------- */
 addEventListener('keydown', e => {
@@ -796,7 +934,7 @@ function updHud(){
   $('#score').textContent = Math.floor(score).toLocaleString();
   $('#dist').textContent = Math.floor(dist).toLocaleString() + ' m';
   $('#giftc').textContent = '🎁 ' + gifts;
-  $('#bestc').textContent = 'Best ' + Math.floor(Math.max(save.best, score)).toLocaleString();
+  $('#bestc').textContent = (mode === 'daily' ? 'Daily best ' : 'Best ') + Math.floor(Math.max(mode === 'daily' ? (save.daily && save.daily.day === runDay ? save.daily.best : 0) : save.best, score)).toLocaleString();
   $('#kmh').textContent = Math.round(P.speed*3.6);
   $('#spbar').style.width = clamp((P.speed-14)/(60-14), 0, 1)*100 + '%';
   let h = '';
@@ -825,12 +963,12 @@ function step(dt){
     P.x += P.vx*dt;
     if (Math.abs(P.x) > TRACK){ P.x = Math.sign(P.x)*TRACK; P.vx *= -.3; P.speed *= .985; for (let i=0;i<3;i++) puff(P.x, .4, P.z, -Math.sign(P.x)*rand(1,4), rand(1,4), rand(0,4), .6); }
     // jumping
-    if (jumpQueued && !P.air){ P.vy = 9.2; P.air = true; P.airT = 0; Audio.jump(); }
+    if (jumpQueued && !P.air){ P.vy = 9.2; P.air = true; P.airT = 0; Audio.jump(); RS.lastJumpD = dist; }
     jumpQueued = false;
     if (P.air){
       P.vy -= 25*dt; P.y += P.vy*dt; P.airT += dt;
       if (P.y <= 0){ P.y = 0; P.air = false; P.vy = 0; if (P.airT > .5){ Audio.land(); shake = Math.max(shake, .25); for (let i=0;i<20;i++) puff(P.x+rand(-1,1), .2, P.z, rand(-5,5), rand(1,4), rand(-2,6), .7); }
-        if (P.rampAir){ P.rampAir = false; if (P.airT > 1){ airs++; const b = 25; score += b*(P.star>0?2:1); popText('Big air! +' + b*(P.star>0?2:1)); } } }
+        if (P.rampAir){ P.rampAir = false; if (P.airT > 1){ airs++; RS.air = airs; const b = 25; score += b*(P.star>0?2:1); popText('Big air! +' + b*(P.star>0?2:1)); } } }
     }
     // move downhill
     const dz = P.speed*dt; P.z -= dz; dist += dz;
@@ -839,6 +977,7 @@ function step(dt){
     score = Math.floor(score*1000)/1000;
     // spawn more rows ahead
     while (nextRow > P.z - 240) nextRow -= spawnRow(nextRow);
+    RS.gifts = gifts; RS.dist = dist; RS.nojump = Math.max(RS.nojump, dist - RS.lastJumpD); checkMissions();
     for (const s of scripted) if (!s.done && P.z < s.at){ s.done = true; showHint(s.hint(), 3200); }
     // runner spray
     if (!P.air) for (const s of [-1,1]) if (Math.random() < .55 + P.speed*.006) puff(P.x + s*.62, .12, P.z + rand(.4, 1.1), s*rand(.8, 2.6) - P.vx*.15, rand(1.2, 3.2), rand(1, 4), rand(.35, .6));
@@ -846,7 +985,7 @@ function step(dt){
     // collisions & pickups
     for (const o of objs){
       if (!o.active || o.gone) continue;
-      if (o.type === 'snowball'){ o.x += o.vx*dt; o.m.position.x = o.x; o.m.rotation.z -= o.vx*dt/1.2; if (Math.abs(o.x) > TRACK + 8){ o.gone = true; freeObj(o); continue; } }
+      if (o.type === 'snowball' || o.type === 'penguin'){ o.x += o.vx*dt; o.m.position.x = o.x; if (o.type === 'snowball') o.m.rotation.z -= o.vx*dt/1.2; else { o.m.rotation.y = o.vx > 0 ? -Math.PI/2 : Math.PI/2; const b = o.m.getObjectByName('pbody'); if (b) b.rotation.z = Math.sin(runT*14 + o.z)*.12; } if (Math.abs(o.x) > TRACK + 10){ o.gone = true; freeObj(o); continue; } }
       const df = DEF[o.type];
       if ((df.k === 'gift' || df.k === 'gold') && P.magnet > 0){ const dx = P.x - o.x, dzz = P.z - o.z; if (Math.abs(dzz) < 14 && Math.abs(dx) < 9){ o.x += dx*Math.min(1, dt*7); o.z += dzz*Math.min(1, dt*5); o.y = lerp(o.y, P.y + 1, dt*5); o.m.position.set(o.x, o.y, o.z); } }
       if (df.k === 'gift' || df.k === 'gold' || df.k === 'power'){ o.m.rotation.y += dt*2.2; o.m.position.y = o.y + Math.sin(runT*3 + o.z)*.15; }
@@ -856,10 +995,12 @@ function step(dt){
       if (dx > df.w + .55) continue;
       switch (df.k){
         case 'crash': if (P.y < df.h) crash(o); break;
+        case 'pond': if (!P.air){ if (P.ice <= .5) Audio.ice(); P.ice = 1.8; } break;
+        case 'gate': if (!o.hit){ if (dx < 1.55){ o.hit = true; RS.gates++; score += 15*(P.star>0?2:1); popText('Gate! +' + 15*(P.star>0?2:1)); Audio.gift(); } else if (dx < 2.15 && P.y < 3.4){ o.hit = true; crash(o); } } break;
         case 'ramp': if (!P.air || P.y < .3){ P.vy = 14 + P.speed*.06; P.air = true; P.airT = 0; P.rampAir = true; Audio.ramp(); } break;
         case 'ice': if (!P.air && P.ice <= 0){ P.ice = 1.3; Audio.ice(); P.vx += rand(-4,4); } else if (!P.air) P.ice = Math.max(P.ice, .4); break;
         case 'gift': case 'gold': if (Math.abs(P.y + .8 - o.y) < 1.7){ const n = df.k === 'gold' ? 5 : 1; gifts += n; score += 10*n*(P.star>0?2:1); o.gone = true; freeObj(o); df.k === 'gold' ? (Audio.gold(), popText('+5 🎁')) : Audio.gift(); for (let i=0;i<10;i++) puff(o.x, o.y, o.z, rand(-3,3), rand(1,5), rand(-3,3), .6); } break;
-        case 'power': if (Math.abs(P.y + .8 - o.y) < 1.7){ o.gone = true; freeObj(o); Audio.power(); if (o.type === 'shield'){ P.shield = 1; popText('🛡️ Shield!'); } else if (o.type === 'magnet'){ P.magnet = 10; popText('🧲 Magnet!'); } else { P.star = 10; popText('⭐ Double points!'); } } break;
+        case 'power': if (Math.abs(P.y + .8 - o.y) < 1.7){ o.gone = true; freeObj(o); Audio.power(); RS.power++; if (o.type === 'shield'){ P.shield = 1; popText('🛡️ Shield!'); } else if (o.type === 'magnet'){ P.magnet = 10; popText('🧲 Magnet!'); } else { P.star = 10; popText('⭐ Double points!'); } } break;
       }
       if (state !== 'play') break;
     }
@@ -905,11 +1046,11 @@ function render(dt){
     }
   }
   // world follows the player
-  for (const c of chunks){ if (c.position.z - CHUNK_L/2 > P.z + 12){ let minZ = Infinity; for (const o of chunks) minZ = Math.min(minZ, o.position.z); c.position.z = minZ - CHUNK_L; } }
+  for (const c of chunks){ while (c.position.z - CHUNK_L/2 > P.z + 12){ let minZ = Infinity; for (const o of chunks) minZ = Math.min(minZ, o.position.z); c.position.z = minZ - CHUNK_L; } }
   mtnGroup.position.z = P.z; sky.position.copy(camera.position);
   sun.position.set(P.x - 30, 45, P.z + 25); sun.target.position.set(P.x, 0, P.z - 10);
   // side trees
-  for (const d of deco){ if (d.position.z > P.z + 20){ d.position.z -= 240; const x = (Math.random() < .5 ? -1 : 1)*rand(HILL_X + .5, 50); d.position.x = x; d.position.y = hillH(x) - .3; } }
+  for (const d of deco){ if (d.position.z > P.z + 20){ d.position.z -= 240*Math.ceil((d.position.z - P.z - 20)/240 + .001); const x = (Math.random() < .5 ? -1 : 1)*rand(HILL_X + .5, 50); d.position.x = x; d.position.y = hillH(x) - .3; } }
   // falling snow drifts with the camera
   for (let i=0;i<SNOW_N;i++){
     snowPos[i*3+1] -= dt*(2.2 + (i%5)*.4); snowPos[i*3] += Math.sin(t + i)*dt*.6;
@@ -942,6 +1083,8 @@ function toMenu(){
   for (const o of objs) freeObj(o); objs.length = 0; P.dead = false; P.y = 0; P.x = 0;
   setSleigh(save.sel);
   $('#mBest').textContent = save.best.toLocaleString(); $('#mGifts').textContent = save.gifts.toLocaleString();
+  const dk = dayKey(); $('#dailyBest').textContent = save.daily && save.daily.day === dk && save.daily.best ? '· today ' + save.daily.best.toLocaleString() : '· new hill today';
+  ensureMissions(); $('#misMenu').innerHTML = missionHtml();
   show('#menu'); loadBoard(); Audio.duck(.32); Audio.scrape(false, 0); presence(false);
 }
 function togglePause(){
@@ -951,10 +1094,13 @@ function togglePause(){
 function syncToggles(){ for (const id of ['#musBtn','#musBtn2']) $(id).classList.toggle('off', !save.music); for (const id of ['#sfxBtn','#sfxBtn2']) $(id).classList.toggle('off', !save.sfx); }
 function setMusic(on){ Audio.init(); Audio.setMusic(on); if (on) Audio.startMusic(); syncToggles(); }
 function setSfx(on){ Audio.init(); Audio.setSfx(on); syncToggles(); }
-$('#playBtn').onclick = () => { Audio.click(); if (!save.tut){ show('#tut'); tutFrom = 'play'; } else startRun(); };
+$('#playBtn').onclick = () => { Audio.click(); mode = 'normal'; if (!save.tut){ show('#tut'); tutFrom = 'play'; } else startRun('normal'); };
+$('#dailyBtn').onclick = () => { Audio.click(); if (!save.tut){ mode = 'daily'; show('#tut'); tutFrom = 'play'; } else startRun('daily'); };
+$('#tabAll').onclick = () => { boardMode = 'normal'; loadBoard(); };
+$('#tabDaily').onclick = () => { boardMode = 'daily'; loadBoard(); };
 let tutFrom = 'menu';
 $('#tutBtn').onclick = () => { Audio.init(); Audio.startMusic(); Audio.click(); tutFrom = 'menu'; show('#tut'); };
-$('#tutGo').onclick = () => { Audio.click(); save.tut = true; persist(); if (tutFrom === 'play') startRun(); else if (tutFrom === 'pause') show('#pause'); else show('#menu'); };
+$('#tutGo').onclick = () => { Audio.click(); save.tut = true; persist(); if (tutFrom === 'play') startRun(mode); else if (tutFrom === 'pause') show('#pause'); else show('#menu'); };
 $('#pTut').onclick = () => { tutFrom = 'pause'; show('#tut'); };
 $('#shopBtn').onclick = () => { Audio.init(); Audio.startMusic(); Audio.click(); state = 'shop'; buildShop(); show('#shop'); };
 $('#shopBack').onclick = () => { Audio.click(); setSleigh(save.sel); toMenu(); };
@@ -996,18 +1142,20 @@ function boardHtml(top, hi){
   return top.slice(0, 10).map((r, i) => `<li class="${hi && r.name.toLowerCase() === hi.toLowerCase() ? 'me' : ''}"><span class="rk">${i+1}</span><span class="nm">${esc(r.name)}${r.v ? '<span class="v" title="Arcade account">✓</span>' : ''}</span><span class="sc">${r.score.toLocaleString()}</span></li>`).join('');
 }
 const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let boardMode = 'normal';
 async function loadBoard(){
+  $('#tabAll').classList.toggle('on', boardMode === 'normal'); $('#tabDaily').classList.toggle('on', boardMode === 'daily');
   const el = $('#lbMenu');
   if (!ON_ARCADE){ el.innerHTML = '<li class="muted">The online leaderboard works on the Bored Arcade site.</li>'; return; }
   try {
-    const r = await fetch('/api/sleigh/scores', {headers:authHeaders()}); const j = await r.json();
+    const r = await fetch('/api/sleigh/scores' + (boardMode === 'daily' ? '?mode=daily&day=' + dayKey() : ''), {headers:authHeaders()}); const j = await r.json();
     el.innerHTML = boardHtml(j.top, me ? me.name : save.name);
-    $('#lbNote').textContent = j.total ? `${j.total} rider${j.total === 1 ? '' : 's'} on the board` + (me ? ` · signed in as ${me.name}` : '') : '';
+    $('#lbNote').textContent = (boardMode === 'daily' ? 'Same hill for everyone today. Resets at midnight (Eastern). ' : '') + (j.total ? `${j.total} rider${j.total === 1 ? '' : 's'} on the board` + (me ? ` · signed in as ${me.name}` : '') : '');
   } catch(e){ el.innerHTML = '<li class="muted">Couldn\'t load the leaderboard. The server might be waking up, so try again in a minute.</li>'; }
 }
 let pendingScore = null;
 async function submitScore(nameOverride){
-  const run = pendingScore = nameOverride ? pendingScore : {score: Math.floor(score), dist: Math.floor(dist), gifts, secs: Math.round(runT*10)/10, air: airs};
+  const run = pendingScore = nameOverride ? pendingScore : {score: Math.floor(score), dist: Math.floor(dist), gifts, secs: Math.round(runT*10)/10, air: airs, gates: RS.gates||0, mode, day: runDay};
   if (!ON_ARCADE){ $('#rankMsg').textContent = 'Play on the Bored Arcade site to post scores online.'; return; }
   if (run.score <= 0) return;
   const name = me ? me.name : (nameOverride || save.name);
@@ -1022,7 +1170,8 @@ async function submitScore(nameOverride){
       return;
     }
     if (!me && nameOverride){ save.name = j.name; persist(); }
-    $('#rankMsg').innerHTML = j.best ? `🏆 You're <b>#${j.rank}</b> on the leaderboard${j.verified ? '' : ' as ' + esc(j.name)}!` : `This run would place <b>#${j.runRank}</b>. Your best is still #${j.rank}.`;
+    const where = run.mode === 'daily' ? "today's Daily Challenge" : 'the leaderboard';
+    $('#rankMsg').innerHTML = j.best ? `🏆 You're <b>#${j.rank}</b> on ${where}${j.verified ? '' : ' as ' + esc(j.name)}!` : `This run would place <b>#${j.runRank}</b> on ${where}. Your best is still #${j.rank}.`;
     $('#lbOver').innerHTML = boardHtml(j.top, j.name);
   } catch(e){ $('#rankMsg').textContent = 'Couldn\'t reach the leaderboard. Your best is saved on this device.'; }
 }

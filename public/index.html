@@ -186,6 +186,43 @@ footer button{background:none;border:0;color:var(--dim);text-decoration:underlin
 @keyframes tin{from{transform:translateX(30px);opacity:0}}
 @media (max-width:860px){.social{grid-template-columns:1fr}}
 @media (max-width:560px){.grid{grid-template-columns:1fr}.brand img{width:60px;height:60px}.key{display:none}.chip{font-size:13px}#chatLog{height:300px}}
+/* ---------- search, favorites, device labels, arcade leaderboard ---------- */
+.searchrow{margin:20px 0 0;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.search{flex:1;min-width:220px;position:relative}
+.search input{width:100%;padding:13px 44px 13px 46px;border-radius:14px;border:2px solid var(--line);background:#ffffff0e;font-size:16px;outline:none;transition:border-color .15s,background .15s}
+.search input:focus{border-color:var(--hot);background:#ffffff16}
+.search input::placeholder{color:var(--dim)}
+.search .ic{position:absolute;left:15px;top:50%;transform:translateY(-50%);font-size:18px;opacity:.8;pointer-events:none}
+.search .kbd{position:absolute;right:12px;top:50%;transform:translateY(-50%);font:600 12px Fredoka,sans-serif;color:var(--dim);border:1px solid var(--line);border-radius:6px;padding:1px 7px;pointer-events:none}
+.search .clr{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:#ffffff1a;border:0;border-radius:50%;width:26px;height:26px;font-size:15px;line-height:26px;padding:0}
+.fchips{display:flex;gap:6px;flex-wrap:wrap}
+.fchips button{border:1px solid var(--line);background:#ffffff0e;border-radius:999px;padding:8px 13px;font-weight:600;font-size:14px;color:var(--dim)}
+.fchips button.on{background:var(--hot);color:#120b2b;border-color:transparent}
+.nomatch{grid-column:1/-1;text-align:center;color:var(--dim);padding:30px;border:2px dashed var(--line);border-radius:20px;font-weight:500}
+.fav{position:absolute;right:12px;bottom:12px;z-index:2;width:38px;height:38px;border-radius:50%;border:0;background:#0d0920d9;font-size:19px;line-height:38px;padding:0;color:#fff8;transition:transform .12s}
+.fav:hover{transform:scale(1.12);color:#fff}
+.fav.on{color:var(--hot);text-shadow:0 0 12px #ffd84a99}
+.tags span.dev{background:#38c6ff22;color:#9fe3ff;border:1px solid #38c6ff55}
+.tags span.dev.ph{background:#5fd35f2b;color:#a8f0a8;border-color:#5fd35f77}
+.badge.favb{background:var(--hot);color:#120b2b}
+.lbsec{margin-top:30px}
+.lbsec .panel{padding:0}
+.lbgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:0}
+.lbcol{padding:14px 16px;border-right:1px solid var(--line)}
+.lbcol:last-child{border-right:0}
+.lbcol h4{margin:0 0 8px;display:flex;align-items:center;gap:8px;font-size:16px}
+.lbcol h4 img{width:26px;height:26px;border-radius:7px}
+.lbcol ol{list-style:none;margin:0;padding:0}
+.lbcol li{display:flex;gap:10px;align-items:center;padding:6px 8px;border-radius:9px;font-size:15px}
+.lbcol li:nth-child(odd){background:#ffffff08}
+.lbcol li .r{width:22px;text-align:right;font-weight:700;color:var(--dim)}
+.lbcol li:nth-child(1) .r{color:#ffd84a}.lbcol li:nth-child(2) .r{color:#dfe6f0}.lbcol li:nth-child(3) .r{color:#e9a36a}
+.lbcol li .n{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lbcol li .s{font-weight:700}
+.lbcol li .x{color:var(--dim);font-size:12px}
+.lbcol .empty{color:var(--dim);font-size:14px;padding:6px 2px}
+.lbcol .v{color:#5fd35f;font-size:12px;margin-left:3px}
+
 /* ---------- Christmas theme (on from Nov 1 to Dec 31) ---------- */
 body.xmas{background:
   radial-gradient(1100px 600px at 10% -10%,#7a1424 0,transparent 60%),
@@ -193,7 +230,7 @@ body.xmas{background:
   linear-gradient(180deg,#0b1026 0,#0e1630 60%,#0b1026 100%);background-attachment:fixed}
 body.xmas .logo{text-shadow:0 0 18px #ff3b4daa,0 0 42px #1fa35a88,3px 3px 0 #e8343a,6px 6px 0 #1d7a37}
 #snow{position:fixed;inset:0;pointer-events:none;z-index:0}
-.lights{position:fixed;left:0;right:0;top:0;height:34px;z-index:2;pointer-events:none;display:flex;justify-content:space-around;padding:0 10px}
+.lights{position:absolute;left:0;right:0;top:0;height:34px;z-index:2;pointer-events:none;display:flex;justify-content:space-around;padding:0 10px}
 .lights::before{content:"";position:absolute;left:0;right:0;top:-8px;height:22px;border-bottom:2px solid #2b3a2b;border-radius:0 0 50% 50%/0 0 100% 100%}
 .lights i{position:relative;top:10px;width:11px;height:17px;border-radius:50% 50% 50% 50%/40% 40% 60% 60%;background:var(--c);box-shadow:0 2px 14px 3px var(--c);animation:twinkle 1.6s infinite;animation-delay:var(--d)}
 .lights i::before{content:"";position:absolute;top:-5px;left:2px;width:7px;height:6px;border-radius:2px;background:#3a3f3a}
@@ -244,11 +281,15 @@ body.xmas .card{position:relative}
   </div>
   <div class="ann" id="ann" hidden><span class="megaphone">&#128227;</span><span class="txt" id="annText"></span><button id="annX" title="Hide">&times;</button></div>
 
+  <div class="searchrow">
+    <div class="search"><span class="ic">🔍</span><input id="gsearch" type="search" placeholder="Search games… (name, type, “phone”, “online”)" autocomplete="off" aria-label="Search games"><span class="kbd" id="gkbd">/</span><button class="clr" id="gclr" title="Clear" hidden>×</button></div>
+    <div class="fchips" id="fchips"><button data-f="all" class="on">All</button><button data-f="fav">★ Favorites</button><button data-f="phone">📱 Phone</button><button data-f="online">🌐 Online</button></div>
+  </div>
   <div class="marquee"><span class="dot off" id="tdot"></span><span id="total">Checking who's online&hellip;</span></div>
-  <p class="notice" id="touch" hidden>Heads up: these games need a keyboard and mouse, so they work best on a computer.</p>
+  <p class="notice" id="touch" hidden>On a phone? Every game has touch controls. The ones marked <b>📱 Great on phones</b> play best on a small screen.</p>
 
   <main class="grid" id="grid">
-    <a class="card" href="/storm-drop/" data-game="storm-drop" data-name="Storm Drop" style="--acc:#ffd84a">
+    <a class="card" href="/storm-drop/" data-game="storm-drop" data-name="Storm Drop" data-dev="both" data-online="1" style="--acc:#ffd84a">
       <div class="shot" style="background-image:url(/img/storm-drop.jpg)"><div class="badges"><div class="badge live"><span class="dot off"></span><span>0 playing</span></div></div><span class="key">press 1</span></div>
       <div class="body">
         <div class="head"><img src="/img/storm-drop-256.png" alt=""><h2 class="title">Storm Drop</h2></div>
@@ -258,7 +299,7 @@ body.xmas .card{position:relative}
         <div class="play"><span class="mode">Everyone joins the same lobby</span><span class="btn">PLAY &rarr;</span></div>
       </div>
     </a>
-    <a class="card" href="/stick-rounds/" data-game="stick-rounds" data-name="Stick Rounds" style="--acc:#ff6a2a">
+    <a class="card" href="/stick-rounds/" data-game="stick-rounds" data-name="Stick Rounds" data-dev="both" data-online="1" style="--acc:#ff6a2a">
       <div class="shot" style="background-image:url(/img/stick-rounds.jpg)"><div class="badges"><div class="badge live"><span class="dot off"></span><span>0 playing</span></div></div><span class="key">press 2</span></div>
       <div class="body">
         <div class="head"><img src="/img/stick-rounds-256.png" alt=""><h2 class="title">Stick Rounds</h2></div>
@@ -268,7 +309,7 @@ body.xmas .card{position:relative}
         <div class="play"><span class="mode">Make a room and send the code</span><span class="btn">PLAY &rarr;</span></div>
       </div>
     </a>
-    <a class="card" href="/rocket-rivals/" data-game="rocket-rivals" data-name="RocketRivals" style="--acc:#36d7ff">
+    <a class="card" href="/rocket-rivals/" data-game="rocket-rivals" data-name="RocketRivals" data-dev="both" data-online="1" style="--acc:#36d7ff">
       <div class="shot" style="background:radial-gradient(circle at 50% 45%,#245d88 0%,#10263f 58%,#091321 100%)"><div class="badges"><div class="badge live"><span class="dot off"></span><span>0 playing</span></div></div><span class="key">press 3</span><div style="height:100%;display:grid;place-items:center;font-size:76px;text-shadow:0 8px 24px #0008">🚗⚽</div></div>
       <div class="body">
         <div class="head"><span style="font-size:28px">🚀</span><h2 class="title">RocketRivals</h2></div>
@@ -278,7 +319,7 @@ body.xmas .card{position:relative}
         <div class="play"><span class="mode">Create a room or join with a code</span><span class="btn">PLAY &rarr;</span></div>
       </div>
     </a>
-    <a class="card" href="/sleigh-rider/" data-game="sleigh-rider" data-name="Sleigh Rider 3D" style="--acc:#e8343a">
+    <a class="card" href="/sleigh-rider/" data-game="sleigh-rider" data-name="Sleigh Rider 3D" data-dev="phone" data-online="0" style="--acc:#e8343a">
       <div class="shot" style="background-image:url(/img/sleigh-rider.jpg)"><div class="badges"><div class="badge live"><span class="dot off"></span><span>0 playing</span></div></div><span class="key">press 4</span></div>
       <div class="body">
         <div class="head"><img src="/img/sleigh-rider-256.png" alt=""><h2 class="title">Sleigh Rider 3D</h2></div>
@@ -290,6 +331,13 @@ body.xmas .card{position:relative}
     </a>
     <div class="card soon"><div><div class="big">+</div>More games coming soon</div></div>
   </main>
+
+  <section class="lbsec">
+    <div class="panel">
+      <div class="phead"><h3 style="margin:0">🏆 Arcade Leaderboard</h3><small id="lbState">loading&hellip;</small></div>
+      <div class="lbgrid" id="lbgrid"></div>
+    </div>
+  </section>
 
   <section class="social">
     <div class="panel">
@@ -314,7 +362,7 @@ body.xmas .card{position:relative}
   <div class="share">
     <span>Send your friends this link:</span><code id="link"></code><button class="pill" id="copy">Copy</button><button class="pill ghost" id="shareBtn" hidden>Share&hellip;</button>
   </div>
-  <footer><span>Log in once and your Storm Drop coins, rank and items follow you to any device.</span><span><button id="newsLink">What's new</button> &middot; Tip: press 1, 2 or 3 to jump into a game.</span></footer>
+  <footer><span>Log in once and your Storm Drop coins, rank and items follow you to any device.</span><span><button id="newsLink">What's new</button> &middot; Tip: press 1–9 to jump into a game, or / to search.</span></footer>
 </div>
 
 <div id="toasts"></div>
@@ -427,14 +475,34 @@ body.xmas .card{position:relative}
   // little chiptune loop: bass + arpeggio, scheduled ahead of time
   const SONG={bpm:112,bass:[45,45,52,52,43,43,50,50,41,41,48,48,43,43,50,47],arp:[[57,60,64],[57,60,64],[55,59,62],[53,57,60]]};
   const mtof=n=>440*Math.pow(2,(n-69)/12);
-  function musicTick(){const ac=SND.ac;if(!ac||!SND.music)return;const spb=60/SONG.bpm/2;
+  // Christmas carols (public domain) while the Christmas theme is on: melody in "note beats" pairs, one chord per bar
+  const XMAS=[{bpm:180,bars:[['E5 1 E5 1 E5 2','C'],['E5 1 E5 1 E5 2','C'],['E5 1 G5 1 C5 1.5 D5 .5','C'],['E5 4','C'],['F5 1 F5 1 F5 1.5 F5 .5','F'],['F5 1 E5 1 E5 1 E5 .5 E5 .5','C'],['E5 1 D5 1 D5 1 E5 1','D'],['D5 2 G5 2','G'],
+      ['E5 1 E5 1 E5 2','C'],['E5 1 E5 1 E5 2','C'],['E5 1 G5 1 C5 1.5 D5 .5','C'],['E5 4','C'],['F5 1 F5 1 F5 1.5 F5 .5','F'],['F5 1 E5 1 E5 1 E5 .5 E5 .5','C'],['G5 1 G5 1 F5 1 D5 1','G'],['C5 4','C']]},
+    {bpm:150,bars:[['G5 1.5 F5 .5 E5 1 D5 1','C'],['C5 1 D5 1 E5 1 C5 1','C'],['D5 .5 E5 .5 F5 .5 D5 .5 E5 1.5 D5 .5','G'],['C5 1 B4 1 C5 2','C'],['G5 1.5 F5 .5 E5 1 D5 1','C'],['C5 1 D5 1 E5 1 C5 1','C'],['D5 .5 E5 .5 F5 .5 D5 .5 E5 1.5 D5 .5','G'],['C5 1 B4 1 C5 2','C'],
+      ['D5 1.5 E5 .5 F5 1 D5 1','G'],['E5 1.5 F5 .5 G5 1 D5 1','C'],['E5 .5 F#5 .5 G5 1 A5 .5 B5 .5 C6 1','D'],['B5 1 A5 1 G5 2','G'],['G5 1.5 F5 .5 E5 1 D5 1','C'],['C5 1 D5 1 E5 1 C5 1','C'],['A5 .5 A5 .5 A5 .5 A5 .5 G5 1.5 F5 .5','F'],['E5 1 D5 1 C5 2','C']]},
+    {bpm:165,bars:[['G4 1',''],['C5 1 C5 .5 D5 .5 C5 .5 B4 .5','C'],['A4 1 A4 1 A4 1','F'],['D5 1 D5 .5 E5 .5 D5 .5 C5 .5','D'],['B4 1 G4 1 G4 1','G'],['E5 1 E5 .5 F5 .5 E5 .5 D5 .5','E'],['C5 1 A4 1 G4 .5 G4 .5','A'],['A4 1 D5 1 B4 1','G'],['C5 3','C']]}];
+  const NOTE=n=>{const m=/^([A-G])(#?)(\d)$/.exec(n);return {C:0,D:2,E:4,F:5,G:7,A:9,B:11}[m[1]]+(m[2]?1:0)+(+m[3]+1)*12;};
+  const ROOT={C:48,F:41,G:43,D:50,E:52,A:45};
+  const XEV=XMAS.map(sg=>{const ev=[];let b=0;for(const [mel,ch] of sg.bars){const t=mel.split(' '),st=b;let len=0;for(let i=0;i<t.length;i+=2){ev.push({b,n:NOTE(t[i]),d:+t[i+1]});b+=+t[i+1];len+=+t[i+1];}if(ch)ev.push({b:st,r:ROOT[ch],d:len});for(let k=0;k<len;k+=.5)ev.push({b:st+k,j:1});}ev.sort((x,y)=>x.b-y.b);return {bpm:sg.bpm,ev,len:b};});
+  const XS={song:0,i:0,t0:0};
+  function xmasTick(){const ac=SND.ac;
+    while(true){const sg=XEV[XS.song%XEV.length],spb=60/sg.bpm;
+      if(XS.i>=sg.ev.length){XS.t0+=sg.len*spb+spb*2;XS.song++;XS.i=0;continue;}
+      const e=sg.ev[XS.i],t=XS.t0+e.b*spb;if(t>ac.currentTime+.25)break;const at=Math.max(0,t-ac.currentTime);
+      if(e.n!=null){tone(mtof(e.n),Math.max(.35,e.d*spb*1.4),{type:'sine',vol:.09,at,dest:SND.musicGain});tone(mtof(e.n)*2,e.d*spb*.7,{type:'triangle',vol:.025,at,dest:SND.musicGain});}
+      else if(e.r){tone(mtof(e.r-12),Math.min(e.d,2)*spb,{type:'triangle',vol:.1,at,dest:SND.musicGain});}
+      else if(e.j){tone(5200+Math.random()*900,.03,{type:'square',vol:.008,at,dest:SND.musicGain});}
+      XS.i++;}}
+  function musicTick(){const ac=SND.ac;if(!ac||!SND.music)return;
+    if(document.body.classList.contains('xmas')){if(XS.t0<ac.currentTime-1&&XS.i===0)XS.t0=ac.currentTime+.05;return xmasTick();}
+    const spb=60/SONG.bpm/2;
     while(SND.next<ac.currentTime+.25){const s=SND.step,at=SND.next-ac.currentTime;
       if(s%2===0)tone(mtof(SONG.bass[(s>>1)%16]),spb*1.8,{type:'triangle',vol:.09,at,dest:SND.musicGain});
       const ch=SONG.arp[(s>>3)%4];tone(mtof(ch[s%3]+12),spb*.9,{type:'square',vol:.022,at,dest:SND.musicGain});
       if(s%4===2)tone(2400,.03,{type:'square',vol:.012,at,dest:SND.musicGain});
       SND.step++;SND.next+=spb;}}
   function setMusic(on){SND.music=on;LS.set('arcade-music',on?'1':'0');updateSoundUI();
-    if(on){const ac=audio();if(!ac)return;if(!SND.musicGain){SND.musicGain=ac.createGain();SND.musicGain.connect(SND.master);}SND.musicGain.gain.value=.55;SND.next=ac.currentTime+.05;clearInterval(SND.timer);SND.timer=setInterval(musicTick,60);}
+    if(on){const ac=audio();if(!ac)return;if(!SND.musicGain){SND.musicGain=ac.createGain();SND.musicGain.connect(SND.master);}SND.musicGain.gain.value=.55;SND.next=ac.currentTime+.05;XS.i=0;XS.t0=ac.currentTime+.05;clearInterval(SND.timer);SND.timer=setInterval(musicTick,60);}
     else{clearInterval(SND.timer);if(SND.musicGain)SND.musicGain.gain.value=0;}}
   function setSfx(on){SND.sfx=on;LS.set('arcade-sfx',on?'1':'0');updateSoundUI();if(on)sfx.click();}
   function updateSoundUI(){$('musicBtn').classList.toggle('off',!SND.music);$('sfxBtn').classList.toggle('off',!SND.sfx);$('sfxBtn').innerHTML=SND.sfx?'&#128266;':'&#128263;';
@@ -470,7 +538,7 @@ body.xmas .card{position:relative}
   for(const c of cards){c.addEventListener('click',e=>{if(e.metaKey||e.ctrlKey||e.shiftKey||e.button!==0)return;openGame(c);});c.addEventListener('mouseenter',()=>sfx.hover());}
   addEventListener('pageshow',()=>{$('loading').hidden=true;markLast();});
   const modalOpen=()=>[...document.querySelectorAll('.modal')].some(m=>!m.hidden);
-  addEventListener('keydown',e=>{if(modalOpen()||/INPUT|TEXTAREA/.test(e.target.tagName)||e.metaKey||e.ctrlKey||e.altKey)return;const i=+e.key-1;if(i>=0&&i<cards.length){openGame(cards[i]);location.href=cards[i].getAttribute('href');}});
+  addEventListener('keydown',e=>{if(modalOpen()||/INPUT|TEXTAREA/.test(e.target.tagName)||e.metaKey||e.ctrlKey||e.altKey)return;const vc=window.__arcadeVisibleCards?window.__arcadeVisibleCards():cards,i=+e.key-1;if(i>=0&&i<vc.length&&i<9){openGame(vc[i]);location.href=vc[i].getAttribute('href');}});
 
   // ================= live player counts =================
   async function stats(){
@@ -653,6 +721,90 @@ body.xmas .card{position:relative}
   $('chatForm').onsubmit=e=>{e.preventDefault();const t=$('chatIn').value.trim();if(!t||!ws||ws.readyState!==1)return;ws.send(JSON.stringify({t:'chat',text:t}));$('chatIn').value='';sfx.send();};
 
   refreshMe();
+})();
+</script>
+<script>
+/* ---------- search, favorites, recently played, device labels ---------- */
+(function(){
+  const LSG = k => { try { return localStorage.getItem(k); } catch(e){ return null; } }, LSS = (k,v) => { try { localStorage.setItem(k, v); } catch(e){} };
+  const grid = document.getElementById('grid'), cards = [...grid.querySelectorAll('.card[data-game]')], soon = grid.querySelector('.card.soon');
+  const base = cards.slice();
+  let favs = []; try { favs = JSON.parse(LSG('arcade-favs') || '[]'); } catch(e){}
+  let hist = {}; try { hist = JSON.parse(LSG('arcade-hist') || '{}'); } catch(e){}
+  // phone labels + star buttons
+  for (const c of cards){
+    const shot = c.querySelector('.shot'), tags = c.querySelector('.tags');
+    const d = document.createElement('span'); d.className = 'dev' + (c.dataset.dev === 'phone' ? ' ph' : '');
+    d.textContent = c.dataset.dev === 'phone' ? '📱 Great on phones' : c.dataset.dev === 'keyboard' ? '⌨️ Keyboard needed' : '💻 Best on computer · 📱 OK';
+    tags.prepend(d);
+    const b = document.createElement('button'); b.className = 'fav'; b.type = 'button'; b.title = 'Add to favorites'; b.setAttribute('aria-label', 'Favorite ' + c.dataset.name);
+    b.onclick = e => { e.preventDefault(); e.stopPropagation(); const g = c.dataset.game, i = favs.indexOf(g); if (i >= 0) favs.splice(i, 1); else favs.push(g); LSS('arcade-favs', JSON.stringify(favs)); layout(); };
+    shot.appendChild(b);
+    c.addEventListener('click', () => { hist[c.dataset.game] = Date.now(); LSS('arcade-hist', JSON.stringify(hist)); });
+  }
+  // migrate the single "last played" into history
+  try { const last = JSON.parse(LSG('arcade-last') || 'null'); if (last && last.g && !hist[last.g]) hist[last.g] = last.t || 1; } catch(e){}
+  const input = document.getElementById('gsearch'), clr = document.getElementById('gclr'), kbd = document.getElementById('gkbd');
+  let filter = 'all';
+  const norm = t => t.toLowerCase().replace(/[^a-z0-9 ]/g, ' ');
+  function matches(c, q){
+    if (filter === 'fav' && !favs.includes(c.dataset.game)) return false;
+    if (filter === 'phone' && c.dataset.dev !== 'phone' && c.dataset.dev !== 'both') return false;
+    if (filter === 'online' && c.dataset.online !== '1') return false;
+    if (!q) return true;
+    const hay = norm(c.dataset.name + ' ' + c.dataset.game + ' ' + c.querySelector('.desc').textContent + ' ' + [...c.querySelectorAll('.tags span')].map(t => t.textContent).join(' ') + (c.dataset.dev !== 'keyboard' ? ' phone mobile touch' : '') + (c.dataset.online === '1' ? ' online multiplayer friends' : ' solo'));
+    return norm(q).split(' ').filter(Boolean).every(w => hay.includes(w));
+  }
+  let nomatch = null;
+  function layout(){
+    // order: favorites (in the order you starred them), then most recently played, then the usual order
+    const order = base.slice().sort((a, b) => {
+      const fa = favs.indexOf(a.dataset.game), fb = favs.indexOf(b.dataset.game);
+      if ((fa >= 0) !== (fb >= 0)) return fa >= 0 ? -1 : 1;
+      if (fa >= 0) return fa - fb;
+      const ha = hist[a.dataset.game] || 0, hb = hist[b.dataset.game] || 0;
+      if (ha !== hb) return hb - ha;
+      return base.indexOf(a) - base.indexOf(b);
+    });
+    const q = input.value.trim(); let shown = 0;
+    for (const c of order){
+      grid.insertBefore(c, soon);
+      const ok = matches(c, q); c.hidden = !ok; if (ok) shown++;
+      const on = favs.includes(c.dataset.game), b = c.querySelector('.fav'); b.classList.toggle('on', on); b.textContent = on ? '★' : '☆'; b.title = on ? 'Remove from favorites' : 'Add to favorites';
+      let fb = c.querySelector('.badge.favb'); if (on && !fb){ fb = document.createElement('div'); fb.className = 'badge favb'; fb.textContent = '★ Favorite'; c.querySelector('.badges').appendChild(fb); } else if (!on && fb) fb.remove();
+    }
+    // "press N" keys follow what you see
+    let n = 1; for (const c of order){ const k = c.querySelector('.key'); if (!k) continue; if (!c.hidden && n <= 9){ k.textContent = 'press ' + n++; k.hidden = false; } else k.hidden = true; }
+    soon.hidden = !!q || filter !== 'all';
+    if (!nomatch){ nomatch = document.createElement('div'); nomatch.className = 'nomatch'; }
+    if (!shown){ nomatch.innerHTML = filter === 'fav' && !q ? 'No favorites yet. Tap the ☆ on a game to pin it to the top.' : `No games match “${q.replace(/[<>&]/g, '')}”.`; grid.insertBefore(nomatch, soon); } else nomatch.remove();
+    clr.hidden = !q; kbd.hidden = !!q;
+  }
+  window.__arcadeVisibleCards = () => [...grid.querySelectorAll('.card[data-game]')].filter(c => !c.hidden);
+  input.addEventListener('input', layout);
+  input.addEventListener('keydown', e => { if (e.key === 'Escape'){ input.value = ''; layout(); input.blur(); } if (e.key === 'Enter'){ const v = window.__arcadeVisibleCards()[0]; if (v) v.click(); } });
+  clr.onclick = () => { input.value = ''; layout(); input.focus(); };
+  for (const b of document.querySelectorAll('#fchips button')) b.onclick = () => { filter = b.dataset.f; for (const x of document.querySelectorAll('#fchips button')) x.classList.toggle('on', x === b); layout(); };
+  addEventListener('keydown', e => { if (e.key === '/' && !/INPUT|TEXTAREA/.test(e.target.tagName) && ![...document.querySelectorAll('.modal')].some(m => !m.hidden)){ e.preventDefault(); input.focus(); } }, true);
+  layout();
+
+  /* ---------- arcade leaderboard ---------- */
+  const lbg = document.getElementById('lbgrid'), st = document.getElementById('lbState');
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const RANKS = [[5500,'Grandmaster'],[3500,'Diamond'],[2000,'Plat'],[1000,'Gold'],[400,'Silver'],[0,'Bronze']];
+  const rankOf = e => RANKS.find(r => e >= r[0])[1];
+  const col = (title, icon, href, rows, empty) => `<div class="lbcol"><h4><img src="${icon}" alt="">${title}</h4>${rows.length ? '<ol>' + rows.join('') + '</ol>' : `<div class="empty">${empty}</div>`}<div style="margin-top:8px"><a href="${href}" style="font-size:13px;color:var(--dim)">Play →</a></div></div>`;
+  async function loadLeaders(){
+    try {
+      const r = await fetch('/api/leaders', {cache:'no-store'}); if (!r.ok) throw 0; const j = await r.json();
+      lbg.innerHTML =
+        col('Storm Drop · ranked', '/img/storm-drop-256.png', '/storm-drop/', j.storm.map((p, i) => `<li><span class="r">${i+1}</span><span class="n">${esc(p.name)} <span class="x">${rankOf(p.elo)}</span></span><span class="s">${p.elo.toLocaleString()}</span></li>`), 'No ranked players yet. Make an account and play!') +
+        col('Sleigh Rider · all-time', '/img/sleigh-rider-256.png', '/sleigh-rider/', j.sleigh.map((p, i) => `<li><span class="r">${i+1}</span><span class="n">${esc(p.name)}${p.v ? '<span class="v">✓</span>' : ''}</span><span class="s">${p.score.toLocaleString()}</span></li>`), 'No scores yet. Be the first!') +
+        col("Sleigh Rider · today's daily", '/img/sleigh-rider-256.png', '/sleigh-rider/', j.daily.map((p, i) => `<li><span class="r">${i+1}</span><span class="n">${esc(p.name)}${p.v ? '<span class="v">✓</span>' : ''}</span><span class="s">${p.score.toLocaleString()}</span></li>`), 'Nobody has ridden today\'s hill yet.');
+      st.textContent = 'updates every minute';
+    } catch(e){ st.textContent = 'couldn\'t load right now'; if (!lbg.innerHTML) lbg.innerHTML = '<div class="lbcol"><div class="empty">The leaderboard will show up once the server is awake.</div></div>'; }
+  }
+  loadLeaders(); setInterval(loadLeaders, 60e3);
 })();
 </script>
 <script>

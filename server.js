@@ -92,6 +92,7 @@ function makeFileStore() {
     async init() {},
     async getUserByEmail(email) { return db.users[email] || null; },
     async getUserById(id) { return byId(id); },
+    async topPlayers(n) { return Object.values(db.users).map((u) => ({ id: u.id, name: u.name, data: u.data || {} })).sort((a, b) => ((b.data.elo || 0) - (a.data.elo || 0)) || (((b.data.stats || {}).wins || 0) - ((a.data.stats || {}).wins || 0))).slice(0, n); },
     async createUser(u) {
       if (db.users[u.email]) return null;
       const user = { id: db.nextId++, ...u, created: Date.now() };
@@ -193,6 +194,7 @@ function makePgStore(rawUrl) {
     },
     getUserByEmail: (email) => one('SELECT * FROM sd_users WHERE email=$1', [email]),
     getUserById: (id) => one('SELECT * FROM sd_users WHERE id=$1', [id]),
+    async topPlayers(n) { return (await q("SELECT id, name, data FROM sd_users ORDER BY COALESCE((data->>'elo')::int, 0) DESC, COALESCE((data->'stats'->>'wins')::int, 0) DESC LIMIT $1", [n])).rows; },
     async createUser(u) {
       try { return await one('INSERT INTO sd_users (email,name,salt,hash,data) VALUES ($1,$2,$3,$4,$5) RETURNING *', [u.email, u.name, u.salt, u.hash, JSON.stringify(u.data)]); }
       catch (e) { if (e.code === '23505') return null; throw e; }
@@ -458,6 +460,7 @@ async function sleighScores(req, res) {
       list.sort((x, y) => y.score - x.score);
       if (list.length > 200) list.length = 200;
       await store.setKV(KEY, list);
+      leadersAt = 0;
       best = true;
     }
     const rank = list.findIndex((r) => r.name.toLowerCase() === key) + 1;
@@ -466,6 +469,22 @@ async function sleighScores(req, res) {
   }).catch((e) => { result = { error: 'Could not save: ' + errText(e) }; });
   await sleighLock;
   return send(res, result.error ? (result.taken ? 409 : 500) : 200, result);
+}
+
+// Arcade leaderboard for the hub: Storm Drop ranks from accounts + Sleigh Rider scores (cached for a minute)
+let leadersCache = null, leadersAt = 0;
+async function arcadeLeaders(res) {
+  if (leadersCache && Date.now() - leadersAt < 60e3) return send(res, 200, leadersCache);
+  try { await ensureReady(); } catch { return send(res, 503, { error: 'Leaderboard is unavailable right now.' }); }
+  try {
+    const users = (await store.topPlayers(10)).filter((u) => u.data && ((u.data.elo || 0) > 0 || ((u.data.stats || {}).games || 0) > 0));
+    const storm = users.map((u) => ({ name: cleanName(u.name), elo: u.data.elo || 0, wins: (u.data.stats || {}).wins || 0, kills: (u.data.stats || {}).kills || 0 }));
+    const sl = ((await store.getKV(SLEIGH_KEY)) || []).slice(0, 10).map((r) => ({ name: r.name, score: r.score, v: r.v ? 1 : 0 }));
+    let day; try { day = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()); } catch { day = new Date().toISOString().slice(0, 10); }
+    const daily = ((await store.getKV('sleigh_daily_' + day)) || []).slice(0, 5).map((r) => ({ name: r.name, score: r.score, v: r.v ? 1 : 0 }));
+    leadersCache = { storm, sleigh: sl, daily, at: Date.now() }; leadersAt = Date.now();
+    return send(res, 200, leadersCache);
+  } catch (e) { return send(res, 500, { error: 'Could not load the leaderboard: ' + errText(e) }); }
 }
 
 // ---------------------------------------------------------------------------
@@ -489,6 +508,7 @@ async function handleApi(req, res, url) {
     return send(res, 200, out);
   }
   if (url === '/api/sleigh/scores') return sleighScores(req, res);
+  if (url === '/api/leaders') return arcadeLeaders(res);
 
   const GETS = new Set(['/api/me', '/api/hub', '/api/friends']);
   if (req.method !== 'POST' && !GETS.has(url)) return send(res, 405, { error: 'Method not allowed' });

@@ -348,17 +348,17 @@ const Audio = (() => {
 const canvas = $('#c');
 const renderer = new THREE.WebGLRenderer({canvas, antialias: !IS_TOUCH, powerPreference:'high-performance'});
 renderer.setPixelRatio(Math.min(IS_TOUCH ? 1.5 : 2, devicePixelRatio || 1));
-renderer.shadowMap.enabled = !IS_TOUCH; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.shadowMap.enabled = false;
+
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(62, 1, .1, 420);
-function resize(){ const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); camera.aspect = w/h; camera.fov = w/h < 1 ? 78 : 62; camera.updateProjectionMatrix(); }
+const camera = new THREE.PerspectiveCamera(60, 1, .05, 420);
+function resize(){ const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); camera.aspect = w/h; camera.fov = w/h < 1 ? 80 : 60; camera.updateProjectionMatrix(); }
 addEventListener('resize', resize); resize();
 
-const SKY = {day:[0x8fc4ff, 0xeaf4ff], dusk:[0xff9a6b, 0xffd6b0], night:[0x0a1433, 0x1d2f5e]};
-scene.fog = new THREE.Fog(0xeaf4ff, 60, 230);
-const hemi = new THREE.HemisphereLight(0xdfeeff, 0x9fb3d6, .75); scene.add(hemi);
-const sun = new THREE.DirectionalLight(0xfff4e0, .9); sun.position.set(-30, 60, 20); sun.castShadow = true;
+const SKY = {day:[0x6f9fd8, 0xd4ebf8], dusk:[0xe0866e, 0xf7cdb4], night:[0x0a1433, 0x1f3258]};
+scene.fog = new THREE.Fog(0xd4ebf8, 45, 160);
+const hemi = new THREE.HemisphereLight(0xffffff, 0x8aa6cf, .62); scene.add(hemi);
+const sun = new THREE.DirectionalLight(0xffffff, .55); sun.position.set(-30, 45, 25);
 sun.shadow.mapSize.set(1024, 1024); Object.assign(sun.shadow.camera, {left:-30, right:30, top:30, bottom:-30, near:1, far:150}); sun.shadow.bias = -.0015;
 scene.add(sun); scene.add(sun.target);
 
@@ -368,68 +368,99 @@ const skyMat = new THREE.ShaderMaterial({side:THREE.BackSide, depthWrite:false, 
   fragmentShader:'uniform vec3 top; uniform vec3 bot; uniform float stars; varying vec3 vp; float h(vec3 p){ return fract(sin(dot(p, vec3(12.9898,78.233,45.164)))*43758.5453); } void main(){ float t = clamp(vp.y*1.6+.15, 0., 1.); vec3 c = mix(bot, top, t); vec3 q = floor(vp*220.); float s = step(.997, h(q)) * stars * smoothstep(.05,.3,vp.y); float au = stars*smoothstep(.15,.45,vp.y)*(1.-smoothstep(.45,.8,vp.y))*(.5+.5*sin(vp.x*9.+vp.z*4.))*.35; c += vec3(.1,1.,.6)*au + vec3(s); gl_FragColor = vec4(c,1.); }'});
 const sky = new THREE.Mesh(new THREE.SphereGeometry(400, 24, 16), skyMat); scene.add(sky);
 
-// snow ground texture
-function snowTex(){
-  const c = document.createElement('canvas'); c.width = c.height = 256; const g = c.getContext('2d');
-  g.fillStyle = '#f4f8ff'; g.fillRect(0,0,256,256);
-  for (let i=0;i<40;i++){ const x = Math.random()*256, y = Math.random()*256, r = rand(10, 34); const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, 'rgba(170,195,235,.35)'); gr.addColorStop(1, 'rgba(170,195,235,0)'); g.fillStyle = gr; g.fillRect(x-r, y-r, r*2, r*2); }
-  for (let i=0;i<3200;i++){ const v = 215 + Math.random()*40|0; g.fillStyle = `rgb(${v-12},${v-5},${v+6})`; g.fillRect(Math.random()*256, Math.random()*256, 2, 2); }
-  g.strokeStyle = 'rgba(140,170,225,.55)'; g.lineWidth = 2.5;
-  for (let i=0;i<16;i++){ const x = Math.random()*256; g.beginPath(); g.moveTo(x, 0); g.bezierCurveTo(x+rand(-24,24), 90, x+rand(-24,24), 170, x, 256); g.stroke(); }
-  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(8, 26); t.anisotropy = 4; return t;
+// ---------- low-poly look: every mesh is flat shaded with slightly jittered corners ----------
+function facet(geo, amt=0){
+  geo = geo.index ? geo.toNonIndexed() : geo;
+  const p = geo.attributes.position;
+  if (amt){ const seen = new Map();
+    for (let i=0;i<p.count;i++){ const k = Math.round(p.getX(i)*1e3)+','+Math.round(p.getY(i)*1e3)+','+Math.round(p.getZ(i)*1e3);
+      let d = seen.get(k); if (!d){ d = [rand(-amt,amt), rand(-amt,amt)*.7, rand(-amt,amt)]; seen.set(k, d); }
+      p.setXYZ(i, p.getX(i)+d[0], p.getY(i)+d[1], p.getZ(i)+d[2]); } }
+  geo.computeVertexNormals(); return geo;
 }
-const groundTex = snowTex();
-const ground = new THREE.Mesh(new THREE.PlaneGeometry(140, 460), new THREE.MeshLambertMaterial({map:groundTex, color:0xffffff}));
-ground.material.color.setHex(0xe9eff9); ground.rotation.x = -Math.PI/2; ground.receiveShadow = true; scene.add(ground);
-// soft snow banks along the edges of the run
-const bankMat = new THREE.MeshLambertMaterial({color:0xf0f5ff});
-const banks = [-1, 1].map(s => { const m = new THREE.Mesh(new THREE.CylinderGeometry(2.6, 2.6, 460, 14), bankMat); m.rotation.x = Math.PI/2; m.position.x = s*16.4; m.position.y = -1.4; m.receiveShadow = true; scene.add(m); return m; });
-// distant mountains
+// ---------- faceted icy ground, in chunks that recycle as you ride ----------
+const CHUNK_L = 60, CHUNK_N = 4, HILL_X = 15.5;
+const hillH = x => { const a = Math.abs(x); return a > HILL_X ? (a - HILL_X)*.42 + Math.sin(x*.7)*.3 : 0; };
+const ICE = [0xffffff, 0xeefaff, 0xdcf4fd, 0xc9eefb, 0xb6e6f8, 0xa7def4, 0xe4f7fe];
+const groundMat = new THREE.MeshLambertMaterial({vertexColors:true});
+function makeChunk(){
+  let geo = new THREE.PlaneGeometry(110, CHUNK_L, 30, 15); geo.rotateX(-Math.PI/2);
+  const p = geo.attributes.position;
+  for (let i=0;i<p.count;i++){
+    let x = p.getX(i), z = p.getZ(i);
+    const edgeZ = Math.abs(Math.abs(z) - CHUNK_L/2) < .01, edgeX = Math.abs(Math.abs(x) - 55) < .01;
+    if (!edgeZ && !edgeX){ x += rand(-.9, .9); z += rand(-1.1, 1.1); }
+    let h = hillH(x) + (edgeZ ? 0 : (Math.abs(x) > HILL_X ? rand(-.5, .7) : rand(-.12, .14)));
+    p.setXYZ(i, x, h, z);
+  }
+  geo = geo.toNonIndexed(); geo.computeVertexNormals();
+  const n = geo.attributes.position.count, col = new Float32Array(n*3), c = new THREE.Color();
+  for (let f=0; f<n; f+=3){
+    const side = Math.abs(geo.attributes.position.getX(f)) > HILL_X + 1;
+    c.setHex(pick(ICE)); if (side) c.offsetHSL(0, -.05, -.04);
+    for (let k=0;k<3;k++){ col[(f+k)*3] = c.r; col[(f+k)*3+1] = c.g; col[(f+k)*3+2] = c.b; }
+  }
+  geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  const m = new THREE.Mesh(geo, groundMat); scene.add(m); return m;
+}
+const chunks = []; for (let i=0;i<CHUNK_N;i++){ const m = makeChunk(); m.position.z = 20 - CHUNK_L/2 - i*CHUNK_L; chunks.push(m); }
+// far hills on the horizon
 const mtnGroup = new THREE.Group(); scene.add(mtnGroup);
 {
-  const mm = new THREE.MeshLambertMaterial({color:0xd9e4f7, fog:false}), cap = new THREE.MeshLambertMaterial({color:0xffffff, fog:false}), rock = new THREE.MeshLambertMaterial({color:0x7f8fb3, fog:false});
-  for (let i=0;i<14;i++){
-    const h = rand(50, 110), r = rand(40, 80), x = (i-6.5)*55 + rand(-15,15);
-    const m = new THREE.Mesh(new THREE.ConeGeometry(r, h, 7), i%3 ? mm : rock); m.position.set(x, h/2 - 12, -330 + rand(-20, 20)); mtnGroup.add(m);
-    const c = new THREE.Mesh(new THREE.ConeGeometry(r*.38, h*.38, 7), cap); c.position.set(x, h - 12 - h*.19 + .5, m.position.z); mtnGroup.add(c);
+  const hm = [new THREE.MeshLambertMaterial({color:0x5d6f96}), new THREE.MeshLambertMaterial({color:0x7488ad})], cap = new THREE.MeshLambertMaterial({color:0xeaf6ff});
+  for (let i=0;i<12;i++){
+    const h = rand(40, 75), r = rand(35, 60), x = (i-5.5)*48 + rand(-12,12), z = -175 + rand(-10, 10);
+    const m = new THREE.Mesh(facet(new THREE.ConeGeometry(r, h, 6, 2), 4), hm[i%2]); m.position.set(x, h/2 - 6, z); mtnGroup.add(m);
+    const c = new THREE.Mesh(facet(new THREE.ConeGeometry(r*.4, h*.4, 6), 1.5), cap); c.position.set(x, h - 6 - h*.2 + .4, z); mtnGroup.add(c);
   }
 }
 // falling snow
-const SNOW_N = IS_TOUCH ? 900 : 1800;
+const SNOW_N = IS_TOUCH ? 500 : 900;
 const snowGeo = new THREE.BufferGeometry(), snowPos = new Float32Array(SNOW_N*3);
 for (let i=0;i<SNOW_N;i++){ snowPos[i*3] = rand(-50,50); snowPos[i*3+1] = rand(0,40); snowPos[i*3+2] = rand(-120,20); }
 snowGeo.setAttribute('position', new THREE.BufferAttribute(snowPos, 3));
-const snowPts = new THREE.Points(snowGeo, new THREE.PointsMaterial({color:0xffffff, size:.22, transparent:true, opacity:.9, depthWrite:false}));
+const snowPts = new THREE.Points(snowGeo, new THREE.PointsMaterial({color:0xffffff, size:.16, transparent:true, opacity:.85, depthWrite:false}));
 scene.add(snowPts);
-// snow spray behind the runners
-const SPRAY_N = 260, sprayGeo = new THREE.BufferGeometry(), sprayPos = new Float32Array(SPRAY_N*3), sprayVel = new Float32Array(SPRAY_N*3), sprayLife = new Float32Array(SPRAY_N);
-sprayGeo.setAttribute('position', new THREE.BufferAttribute(sprayPos, 3));
-const spray = new THREE.Points(sprayGeo, new THREE.PointsMaterial({color:0xffffff, size:.35, transparent:true, opacity:.85, depthWrite:false})); spray.frustumCulled = false; scene.add(spray);
+// chunky snow spray thrown off the sled (little icy polygons)
+const SPRAY_N = 240, sprayPos = new Float32Array(SPRAY_N*3), sprayVel = new Float32Array(SPRAY_N*3), sprayLife = new Float32Array(SPRAY_N), sprayRot = new Float32Array(SPRAY_N*3), spraySize = new Float32Array(SPRAY_N);
+const spray = new THREE.InstancedMesh(facet(new THREE.IcosahedronGeometry(1, 0)), new THREE.MeshLambertMaterial({color:0xc9eefa}), SPRAY_N);
+spray.frustumCulled = false; spray.instanceMatrix.setUsage(THREE.DynamicDrawUsage); scene.add(spray);
+const _o = new THREE.Object3D();
 let sprayI = 0;
-function puff(x, y, z, vx, vy, vz, life){ const i = sprayI++ % SPRAY_N; sprayPos[i*3]=x; sprayPos[i*3+1]=y; sprayPos[i*3+2]=z; sprayVel[i*3]=vx; sprayVel[i*3+1]=vy; sprayVel[i*3+2]=vz; sprayLife[i]=life; }
+function puff(x, y, z, vx, vy, vz, life){ const i = sprayI++ % SPRAY_N; sprayPos[i*3]=x; sprayPos[i*3+1]=y; sprayPos[i*3+2]=z; sprayVel[i*3]=vx; sprayVel[i*3+1]=vy; sprayVel[i*3+2]=vz; sprayLife[i]=life; spraySize[i] = rand(.06, .17); sprayRot[i*3]=rand(0,6); sprayRot[i*3+1]=rand(0,6); sprayRot[i*3+2]=rand(0,6); }
 
 /* ---------------- models ---------------- */
 const M = (c, o={}) => new THREE.MeshLambertMaterial({color:c, ...o});
 const MAT = {
-  trunk:M(0x6b4423), pine:M(0x1f6b3a), pine2:M(0x2a8048), snow:M(0xffffff), rock:M(0x7c8597), rock2:M(0x9aa3b5), log:M(0x7a4d28), logEnd:M(0xc9a06a),
-  carrot:M(0xff7a1a), coal:M(0x222222), red:M(0xd42a2a), green:M(0x1d8a3e), gold:M(0xffc928, {emissive:0x664400}), wood:M(0xa0703f), ice:new THREE.MeshPhongMaterial({color:0xaee3ff, transparent:true, opacity:.7, shininess:90}),
-  ramp:M(0xdde8f8), rampStripe:M(0xe8343a), fence:M(0xb07a45), fenceRed:M(0xd42a2a), shield:new THREE.MeshPhongMaterial({color:0x5cc8ff, transparent:true, opacity:.45, emissive:0x1a4a77, shininess:100}),
-  skin:M(0xf2c9a0), white:M(0xffffff), black:M(0x1a1a1a), bulb:[M(0xff4040,{emissive:0x990000}),M(0x40ff70,{emissive:0x007a20}),M(0xffe040,{emissive:0x886600}),M(0x40a0ff,{emissive:0x004488})],
+  trunk:M(0x7a4a3a), trunk2:M(0x5c372c), pine:M(0x3d8a5f), pine2:M(0x2f7350), snow:M(0xeef8ff), snowB:M(0xcfe6fb), rock:M(0x55658a), rock2:M(0x6f80a6), log:M(0x7a4a3a), logEnd:M(0xc9a06a),
+  carrot:M(0xff7a1a), coal:M(0x222222), red:M(0xd42a2a), green:M(0x1d8a3e), gold:M(0xffc928, {emissive:0x664400}), wood:M(0x9a6658), ice:new THREE.MeshPhongMaterial({color:0xaee3ff, transparent:true, opacity:.7, shininess:90, flatShading:true}),
+  ramp:M(0xdcefff), rampStripe:M(0xe8343a), fence:M(0x8a5e52), fenceRed:M(0xd42a2a), shield:new THREE.MeshPhongMaterial({color:0x5cc8ff, transparent:true, opacity:.45, emissive:0x1a4a77, shininess:100}),
+  skin:M(0xf2c9a0), white:M(0xffffff), black:M(0x1a1a1a), bolt:M(0x9cc8ee), bulb:[M(0xff4040,{emissive:0x990000}),M(0x40ff70,{emissive:0x007a20}),M(0xffe040,{emissive:0x886600}),M(0x40a0ff,{emissive:0x004488})],
 };
 const G = {
-  cone1:new THREE.ConeGeometry(2.2, 3.4, 8), cone2:new THREE.ConeGeometry(1.7, 2.8, 8), cone3:new THREE.ConeGeometry(1.1, 2.2, 8), trunk:new THREE.CylinderGeometry(.35, .45, 1.6, 6),
-  sph:new THREE.SphereGeometry(1, 14, 10), box:new THREE.BoxGeometry(1,1,1), cyl:new THREE.CylinderGeometry(1,1,1,12), dode:new THREE.DodecahedronGeometry(1, 0),
+  trunk:facet(new THREE.CylinderGeometry(.32, .48, 2.6, 6), .05), root:facet(new THREE.CylinderGeometry(.05, .55, .5, 6)),
+  tier:[0,1,2,3].map(i => facet(new THREE.ConeGeometry(2.3 - i*.48, 2.1, 7, 1), .12)),
+  skirt:[0,1,2,3].map(i => facet(new THREE.CylinderGeometry((2.3 - i*.48)*.72, (2.3 - i*.48)*1.06, .55, 7), .06)),
+  cap:facet(new THREE.ConeGeometry(.55, .9, 7), .05),
+  sph:facet(new THREE.IcosahedronGeometry(1, 1), .04), sphS:facet(new THREE.IcosahedronGeometry(1, 0)), box:facet(new THREE.BoxGeometry(1,1,1)), cyl:facet(new THREE.CylinderGeometry(1,1,1,8)),
+  dode:facet(new THREE.DodecahedronGeometry(1, 1), .18), stump:facet(new THREE.CylinderGeometry(.42, .55, .8, 7), .05), stumpTop:facet(new THREE.CylinderGeometry(.4, .4, .05, 7)),
+  arch:facet(new THREE.TorusGeometry(.7, .16, 5, 8, Math.PI), .03),
 };
-function mesh(geo, mat, x=0, y=0, z=0, sx=1, sy=1, sz=1){ const m = new THREE.Mesh(geo, mat); m.position.set(x,y,z); m.scale.set(sx,sy,sz); m.castShadow = true; m.receiveShadow = true; return m; }
+function mesh(geo, mat, x=0, y=0, z=0, sx=1, sy=1, sz=1){ const m = new THREE.Mesh(geo, mat); m.position.set(x,y,z); m.scale.set(sx,sy,sz); return m; }
 function makeTree(lights){
   const g = new THREE.Group();
-  g.add(mesh(G.trunk, MAT.trunk, 0, .8, 0));
-  g.add(mesh(G.cone1, MAT.pine, 0, 2.9, 0)); g.add(mesh(G.cone2, MAT.pine2, 0, 4.5, 0)); g.add(mesh(G.cone3, MAT.pine, 0, 5.9, 0));
-  const sn = mesh(G.cone3, MAT.snow, 0, 6.55, 0, .62, .45, .62); g.add(sn);
-  const sn2 = mesh(G.cone2, MAT.snow, 0, 3.85, 0, .9, .18, .9); g.add(sn2);
-  if (lights){ for (let i=0;i<10;i++){ const a = i*1.3, y = 2.2 + i*.38, r = 1.9 - i*.16; g.add(mesh(G.sph, MAT.bulb[i%4], Math.cos(a)*r, y, Math.sin(a)*r, .14, .14, .14)); } }
+  g.add(mesh(G.trunk, MAT.trunk, 0, 1.3, 0));
+  for (let i=0;i<4;i++){
+    const y = 2.75 + i*1.2;
+    g.add(mesh(G.tier[i], i%2 ? MAT.pine2 : MAT.pine, 0, y, 0));
+    g.add(mesh(G.skirt[i], i%2 ? MAT.snowB : MAT.snow, 0, y - .82, 0));
+  }
+  g.add(mesh(G.cap, MAT.snow, 0, 7.15, 0));
+  if (lights){ for (let i=0;i<12;i++){ const a = i*1.3, y = 2.2 + i*.4, r = 2.05 - i*.15; g.add(mesh(G.sphS, MAT.bulb[i%4], Math.cos(a)*r, y, Math.sin(a)*r, .13, .13, .13)); } }
   return g;
 }
+function makeStump(){ const g = new THREE.Group(); g.add(mesh(G.stump, MAT.trunk, 0, .4, 0)); g.add(mesh(G.stumpTop, MAT.logEnd, 0, .81, 0)); for (let i=0;i<3;i++){ const r = mesh(G.root, MAT.trunk2, Math.cos(i*2.1)*.5, .12, Math.sin(i*2.1)*.5); r.rotation.set(Math.sin(i*2.1)*.6, 0, -Math.cos(i*2.1)*.6); g.add(r); } return g; }
+function makeRoot(){ const g = new THREE.Group(); const a = mesh(G.arch, MAT.trunk, 0, 0, 0, 1.4, .9, 1.2); g.add(a); const b = mesh(G.arch, MAT.trunk2, .9, 0, .3, .8, .6, 1); b.rotation.y = .5; g.add(b); return g; }
 function makeSnowman(){
   const g = new THREE.Group();
   g.add(mesh(G.sph, MAT.snow, 0, .8, 0, .9, .85, .9)); g.add(mesh(G.sph, MAT.snow, 0, 1.95, 0, .65, .62, .65)); g.add(mesh(G.sph, MAT.snow, 0, 2.85, 0, .45, .45, .45));
@@ -442,7 +473,7 @@ function makeSnowman(){
   arm(1); arm(-1);
   return g;
 }
-function makeRock(){ const g = new THREE.Group(); g.add(mesh(G.dode, MAT.rock, 0, .45, 0, 1.15, .75, 1)); g.add(mesh(G.dode, MAT.rock2, .7, .3, .3, .55, .45, .5)); g.add(mesh(G.dode, MAT.snow, -.1, .95, 0, .7, .18, .6)); return g; }
+function makeRock(){ const g = new THREE.Group(); g.add(mesh(G.dode, MAT.rock, 0, .5, 0, 1.15, .8, 1)); g.add(mesh(G.dode, MAT.rock2, .75, .32, .35, .55, .45, .5)); g.add(mesh(G.dode, MAT.snow, -.1, 1.02, 0, .72, .2, .62)); return g; }
 function makeLog(w){
   const g = new THREE.Group();
   const l = mesh(G.cyl, MAT.log, 0, .42, 0, .42, w, .42); l.rotation.z = Math.PI/2; g.add(l);
@@ -521,9 +552,15 @@ function makeSleigh(id){
   const g = new THREE.Group(); let hat = MAT.red, coat = MAT.red;
   const rMat = id === 'gold' ? MAT.gold : id === 'ice' ? M(0xdff6ff) : id === 'rocket' ? M(0x9aa3b5) : M(0x333333);
   if (id === 'sled'){
-    for (const s of [-1,1]){ const r = runner(MAT.red); r.position.x = s*.45; g.add(r); }
-    g.add(mesh(G.box, MAT.wood, 0, .32, 0, 1.1, .1, 2.3)); for (let i=-2;i<=2;i++) g.add(mesh(G.box, MAT.trunk, 0, .38, i*.45, 1.12, .04, .14));
-    coat = M(0x2b5fd8); hat = MAT.red;
+    const W = MAT.wood, D = M(0x5e3f38);
+    g.add(mesh(G.box, W, 0, .36, .9, 1.3, .16, .44));            // back board
+    for (const sx of [-.42, 0, .42]){
+      g.add(mesh(G.box, W, sx, .27, .3, .38, .12, 1.0));           // flat part of each slat
+      const r = mesh(G.box, W, sx, .5, -.5, .38, .12, .85); r.rotation.x = .55; g.add(r); // rising toward the front
+    }
+    g.add(mesh(G.box, W, 0, .78, -.92, 1.15, .16, .4));            // front board
+    for (const sx of [-.42, 0, .42]){ g.add(mesh(G.box, MAT.bolt, sx, .455, .92, .07, .03, .07)); g.add(mesh(G.box, MAT.bolt, sx, .875, -.92, .07, .03, .07)); }
+    for (const s of [-1,1]) g.add(mesh(G.box, D, s*.6, .1, 0, .1, .18, 2.1));
   } else if (id === 'toboggan'){
     const shape = new THREE.Shape(); shape.moveTo(0,0); shape.lineTo(2.6,0); shape.quadraticCurveTo(3.3, 0, 3.2, .8); shape.lineTo(3.05, .8); shape.quadraticCurveTo(3.1, .15, 2.5, .12); shape.lineTo(0, .12);
     const t = new THREE.Mesh(new THREE.ExtrudeGeometry(shape, {depth:1, bevelEnabled:false}), MAT.red); t.rotation.y = Math.PI/2; t.position.set(-.5, .1, 1.4); t.castShadow = true; g.add(t);
@@ -557,13 +594,14 @@ function makeSleigh(id){
       for (const s of [-1,1]) g.add(mesh(G.box, M(0x5a3a1b), s*.5, .75, -2.4, .04, .04, 3));
     }
   }
-  const rider = makeRider(hat, coat); rider.position.set(0, id === 'sled' || id === 'toboggan' || id === 'candy' ? .3 : id === 'rocket' ? .75 : .55, id === 'rocket' ? .2 : .25); rider.name = 'rider'; g.add(rider);
-  g.traverse(o => { if (o.isMesh) o.castShadow = true; });
+  // flat-shade everything so it matches the low-poly world
+  g.traverse(o => { if (o.isMesh && o.geometry.index) o.geometry = facet(o.geometry.clone()); });
   return g;
 }
 
 /* ---------------- game state ---------------- */
-const TRACK = 13.2;         // half width of the run
+const TRACK = 13.2;
+const CAM = {sled:[1.75, 2.85], toboggan:[1.95, 3.3], candy:[1.9, 3.2], santa:[3.2, 5], ice:[3.1, 4.8], gold:[3.2, 5], reindeer:[3.4, 5.4], rocket:[2.3, 4.1]};         // half width of the run
 const P = {x:0, y:0, vx:0, vy:0, z:0, speed:0, air:false, tilt:0, dead:false, ice:0, shield:0, magnet:0, star:0, inv:0, airT:0, rampAir:false};
 let sleighMesh = null, shieldBubble = null;
 let state = 'menu', runT = 0, dist = 0, gifts = 0, score = 0, airs = 0, nextRow = 0, deadT = 0, introStep = 0, scripted = [];
@@ -583,6 +621,8 @@ function getObj(type){
       case 'ltree': m = makeTree(true); break;
       case 'snowman': m = makeSnowman(); break;
       case 'rock': m = makeRock(); break;
+      case 'stump': m = makeStump(); break;
+      case 'root': m = makeRoot(); break;
       case 'log': m = makeLog(4.4); break;
       case 'fence': m = makeFence(5.5); break;
       case 'ramp': m = makeRamp(); break;
@@ -599,15 +639,15 @@ function getObj(type){
 }
 const DEF = { // hit box: half width (x), half depth (z), height you have to clear; kind
   tree:{w:1.1, d:1.1, h:99, k:'crash'}, ltree:{w:1.1, d:1.1, h:99, k:'crash'}, snowman:{w:.85, d:.85, h:99, k:'crash'},
-  rock:{w:1.15, d:.9, h:1.05, k:'crash'}, log:{w:2.2, d:.45, h:.8, k:'crash'}, fence:{w:2.75, d:.2, h:1.05, k:'crash'},
+  rock:{w:1.15, d:.9, h:1.05, k:'crash'}, stump:{w:.6, d:.6, h:.85, k:'crash'}, root:{w:1.3, d:.5, h:.75, k:'crash'}, log:{w:2.2, d:.45, h:.8, k:'crash'}, fence:{w:2.75, d:.2, h:1.05, k:'crash'},
   ramp:{w:1.7, d:2, h:0, k:'ramp'}, ice:{w:2.4, d:3.4, h:0, k:'ice'}, gift:{w:.85, d:.85, h:99, k:'gift'}, gold:{w:.9, d:.9, h:99, k:'gold'},
   shield:{w:.9, d:.9, h:99, k:'power'}, magnet:{w:.9, d:.9, h:99, k:'power'}, star:{w:.9, d:.9, h:99, k:'power'}, snowball:{w:1.2, d:1.2, h:2.1, k:'crash'},
 };
 function place(type, x, z, extra){
   const o = getObj(type); o.x = x; o.z = z; o.y = 0; Object.assign(o, extra||{});
   o.m.position.set(x, 0, z);
-  if (type === 'tree' || type === 'ltree'){ const s = rand(.85, 1.2); o.m.scale.set(s, s, s); o.m.rotation.y = rand(0, 6); }
-  if (type === 'rock') o.m.rotation.y = rand(0, 6);
+  if (type === 'tree' || type === 'ltree'){ const s = rand(.9, 1.25); o.m.scale.set(s, s, s); o.m.rotation.y = rand(0, 6); }
+  if (type === 'rock' || type === 'stump' || type === 'root') o.m.rotation.y = type === 'root' ? rand(-.4, .4) : rand(0, 6);
   if (type === 'gift' || type === 'gold' || DEF[type].k === 'power'){ o.y = extra && extra.y || 1; o.m.position.y = o.y; }
   objs.push(o); return o;
 }
@@ -653,7 +693,7 @@ function spawnRow(z){
   const n = 2 + Math.floor(rand(0, 2 + d*4));
   for (let i=0;i<n;i++){
     const x = pickX(2.6); if (x == null) continue;
-    const t = Math.random(), type = t < .45 ? (Math.random() < .25 ? 'ltree' : 'tree') : t < .65 ? 'snowman' : t < .85 ? 'rock' : 'log';
+    const t = Math.random(), type = t < .42 ? (Math.random() < .2 ? 'ltree' : 'tree') : t < .55 ? 'snowman' : t < .7 ? 'rock' : t < .8 ? 'stump' : t < .9 ? 'root' : 'log';
     if (type === 'log' && Math.abs(x - safe) < 5.2) continue;
     place(type, clamp(x, -TRACK+1.2, TRACK-1.2), z + rand(-2.5, 2.5));
   }
@@ -663,8 +703,8 @@ function spawnRow(z){
   return lerp(15, 8.5, d) + rand(-1.5, 1.5);
 }
 // scripted intro for the first ride, teaching the controls
-function introRows(){
-  const z = -70;
+function introRows(z0){
+  const z = z0 - 70;
   return [
     {z, f:() => { place('tree', -6, z); place('tree', -3, z - 1); place('tree', 4, z + 1); place('tree', 8, z); place('gift', 0, z); place('gift', 0, z - 3); }, hint:() => IS_TOUCH ? '👈 Hold left or right side to steer 👉' : 'Steer with ← → or A D', at:z + 45},
     {z:z - 70, f:() => { place('log', -6.6, z - 70); place('log', 0, z - 70); place('log', 6.6, z - 70); }, hint:() => IS_TOUCH ? 'Tap JUMP to hop the logs!' : 'Press SPACE to jump the logs!', at:z - 70 + 40},
@@ -676,18 +716,19 @@ function introRows(){
 /* ---------------- run control ---------------- */
 function resetWorld(){
   for (const o of objs) freeObj(o); objs.length = 0;
-  Object.assign(P, {x:0, y:0, vx:0, vy:0, z:0, speed:14, air:false, tilt:0, dead:false, ice:0, shield:0, magnet:0, star:0, inv:0, airT:0, rampAir:false});
+  const z0 = P.z;
+  Object.assign(P, {x:0, y:0, vx:0, vy:0, speed:14, air:false, tilt:0, dead:false, ice:0, shield:0, magnet:0, star:0, inv:0, airT:0, rampAir:false});
   runT = 0; dist = 0; gifts = 0; score = 0; airs = 0; deadT = 0;
-  scripted = save.tut && save.runs > 0 ? [] : introRows();
-  nextRow = scripted.length ? -340 : -60;
+  scripted = save.tut && save.runs > 0 ? [] : introRows(z0);
+  nextRow = z0 + (scripted.length ? -340 : -60);
   for (const s of scripted) s.f(), s.done = false;
-  while (nextRow > -230) nextRow -= spawnRow(nextRow);
+  while (nextRow > z0 - 230) nextRow -= spawnRow(nextRow);
   if (sleighMesh){ sleighMesh.rotation.set(0,0,0); sleighMesh.position.set(0,0,0); const r = sleighMesh.getObjectByName('rider'); if (r) r.rotation.set(0,0,0); }
 }
 function setSleigh(id){
   if (sleighMesh) scene.remove(sleighMesh);
   sleighMesh = makeSleigh(id); scene.add(sleighMesh);
-  if (!shieldBubble){ shieldBubble = new THREE.Mesh(new THREE.SphereGeometry(2, 20, 14), MAT.shield); scene.add(shieldBubble); }
+  if (!shieldBubble){ shieldBubble = new THREE.Mesh(facet(new THREE.IcosahedronGeometry(1.15, 1)), MAT.shield); scene.add(shieldBubble); }
   shieldBubble.visible = false;
 }
 function startRun(){
@@ -800,7 +841,7 @@ function step(dt){
     while (nextRow > P.z - 240) nextRow -= spawnRow(nextRow);
     for (const s of scripted) if (!s.done && P.z < s.at){ s.done = true; showHint(s.hint(), 3200); }
     // runner spray
-    if (!P.air && Math.random() < .9) for (const s of [-1,1]) puff(P.x + s*.55, .1, P.z + 1.3, rand(-1.5,1.5) + s*.8 - P.vx*.1, rand(1.5, 3.5), rand(2, 6), .5);
+    if (!P.air) for (const s of [-1,1]) if (Math.random() < .55 + P.speed*.006) puff(P.x + s*.62, .12, P.z + rand(.4, 1.1), s*rand(.8, 2.6) - P.vx*.15, rand(1.2, 3.2), rand(1, 4), rand(.35, .6));
     Audio.scrape(!P.air, P.speed);
     // collisions & pickups
     for (const o of objs){
@@ -829,8 +870,12 @@ function step(dt){
     if (deadT > 1.3) endRun();
   }
   // spray particles
-  for (let i=0;i<SPRAY_N;i++){ if (sprayLife[i] <= 0){ sprayPos[i*3+1] = -50; continue; } sprayLife[i] -= dt; sprayVel[i*3+1] -= 9*dt; sprayPos[i*3] += sprayVel[i*3]*dt; sprayPos[i*3+1] += sprayVel[i*3+1]*dt; sprayPos[i*3+2] += sprayVel[i*3+2]*dt; if (sprayPos[i*3+1] < 0){ sprayPos[i*3+1] = 0; sprayVel[i*3+1] = 0; } }
-  sprayGeo.attributes.position.needsUpdate = true;
+  for (let i=0;i<SPRAY_N;i++){
+    if (sprayLife[i] > 0){ sprayLife[i] -= dt; sprayVel[i*3+1] -= 11*dt; sprayPos[i*3] += sprayVel[i*3]*dt; sprayPos[i*3+1] += sprayVel[i*3+1]*dt; sprayPos[i*3+2] += sprayVel[i*3+2]*dt; if (sprayPos[i*3+1] < .02){ sprayPos[i*3+1] = .02; sprayVel[i*3+1] = 0; sprayVel[i*3] *= .9; } sprayRot[i*3] += dt*6; sprayRot[i*3+1] += dt*4; }
+    const sc = sprayLife[i] > 0 ? spraySize[i]*Math.min(1, sprayLife[i]*3) : 0;
+    _o.position.set(sprayPos[i*3], sprayPos[i*3+1], sprayPos[i*3+2]); _o.rotation.set(sprayRot[i*3], sprayRot[i*3+1], sprayRot[i*3+2]); _o.scale.setScalar(sc); _o.updateMatrix(); spray.setMatrixAt(i, _o.matrix);
+  }
+  spray.instanceMatrix.needsUpdate = true;
 }
 
 function render(dt){
@@ -840,7 +885,7 @@ function render(dt){
     if (state === 'menu' || state === 'shop'){
       menuT += dt;
       sleighMesh.position.set(0, 0, P.z); sleighMesh.rotation.set(0, menuT*.35, 0);
-      camera.position.set(Math.sin(menuT*.1)*1.5 + 4.2, 2.6, P.z + 6.2); camera.lookAt(0, .9, P.z);
+      camera.position.set(Math.sin(menuT*.1)*1.2 + 3.4, 2.2, P.z + 4.8); camera.lookAt(0, .5, P.z);
     } else {
       P.tilt = lerp(P.tilt, -P.vx*.025, Math.min(1, dt*8));
       sleighMesh.position.set(P.x, P.y, P.z);
@@ -849,23 +894,22 @@ function render(dt){
       const fl = sleighMesh.getObjectByName('flame'); if (fl) fl.scale.set(1, .8 + Math.random()*.6, 1);
       sleighMesh.traverse(o => { if (o.name === 'deer' && !P.dead) o.position.y = Math.abs(Math.sin(t*10 + o.position.z))*.25; });
       // camera chase
-      const cx = P.x*.75, cy = 4.6 + P.y*.45 + (P.dead ? 1 : 0), cz = P.z + 9.5;
-      camera.position.x = lerp(camera.position.x, cx, Math.min(1, dt*6));
-      camera.position.y = lerp(camera.position.y, cy, Math.min(1, dt*5));
-      camera.position.z = cz;
+      const cv = CAM[save.sel] || CAM.sled, cx = P.x, cy = cv[0] + P.y*.7 + (P.dead ? 1.2 : 0), cz = P.z + (P.dead ? 5 : cv[1]);
+      camera.position.x = lerp(camera.position.x, cx, Math.min(1, dt*14));
+      camera.position.y = lerp(camera.position.y, cy, Math.min(1, dt*8));
+      camera.position.z = lerp(camera.position.z, cz, P.dead ? dt*2 : 1);
       if (shake > 0){ camera.position.x += rand(-1,1)*shake*.5; camera.position.y += rand(-1,1)*shake*.4; shake = Math.max(0, shake - dt*2.5); }
-      camera.lookAt(P.x*.85, 1.2 + P.y*.6, P.z - 12);
-      camera.fov = lerp(camera.fov, (innerWidth/innerHeight < 1 ? 78 : 62) + P.speed*.18, dt*2); camera.updateProjectionMatrix();
-      if (shieldBubble){ shieldBubble.visible = P.shield > 0 || P.inv > 0; shieldBubble.position.set(P.x, P.y + 1, P.z); shieldBubble.material.opacity = P.inv > 0 ? .25 + Math.sin(t*30)*.2 : .3; }
+      camera.lookAt(P.x + P.vx*.04, .55 + P.y*.6, P.z - 9); camera.rotateZ(P.tilt*.6);
+      camera.fov = lerp(camera.fov, (innerWidth/innerHeight < 1 ? 80 : 60) + P.speed*.15, dt*2); camera.updateProjectionMatrix();
+      if (shieldBubble){ shieldBubble.visible = P.shield > 0 || P.inv > 0; shieldBubble.position.set(P.x, P.y + .6, P.z); shieldBubble.material.opacity = P.inv > 0 ? .25 + Math.sin(t*30)*.2 : .3; }
     }
   }
   // world follows the player
-  ground.position.set(0, 0, P.z - 150); groundTex.offset.y = (P.z - 150)/460*-26 % 1;
-  for (const b of banks) b.position.z = P.z - 150;
+  for (const c of chunks){ if (c.position.z - CHUNK_L/2 > P.z + 12){ let minZ = Infinity; for (const o of chunks) minZ = Math.min(minZ, o.position.z); c.position.z = minZ - CHUNK_L; } }
   mtnGroup.position.z = P.z; sky.position.copy(camera.position);
-  sun.position.set(P.x - 30, 60, P.z + 20); sun.target.position.set(P.x, 0, P.z - 10);
+  sun.position.set(P.x - 30, 45, P.z + 25); sun.target.position.set(P.x, 0, P.z - 10);
   // side trees
-  for (const d of deco){ if (d.position.z > P.z + 20){ d.position.z -= 300; d.position.x = (Math.random() < .5 ? -1 : 1)*rand(18, 55); } }
+  for (const d of deco){ if (d.position.z > P.z + 20){ d.position.z -= 240; const x = (Math.random() < .5 ? -1 : 1)*rand(HILL_X + .5, 50); d.position.x = x; d.position.y = hillH(x) - .3; } }
   // falling snow drifts with the camera
   for (let i=0;i<SNOW_N;i++){
     snowPos[i*3+1] -= dt*(2.2 + (i%5)*.4); snowPos[i*3] += Math.sin(t + i)*dt*.6;
@@ -879,7 +923,7 @@ function render(dt){
   tmpC1.setHex(a[1]).lerp(tmpC2.setHex(b[1]), f); skyMat.uniforms.bot.value.copy(tmpC1); scene.fog.color.copy(tmpC1);
   const night = (seg === 2 ? 1 - f : 0) + (seg === 1 ? f : 0);
   skyMat.uniforms.stars.value = night;
-  sun.intensity = lerp(.9, .25, night); hemi.intensity = lerp(.75, .45, night);
+  sun.intensity = lerp(.55, .2, night); hemi.intensity = lerp(.62, .4, night);
   hemi.color.setHex(night > .5 ? 0x9fb3ff : 0xdfeeff);
   renderer.render(scene, camera);
 }
@@ -996,7 +1040,7 @@ function presence(riding){
 }
 
 /* ---------------- boot ---------------- */
-for (let i=0;i<70;i++){ const t = makeTree(Math.random() < .15); t.position.set((Math.random() < .5 ? -1 : 1)*rand(18, 55), 0, rand(-280, 20)); const s = rand(.9, 1.6); t.scale.set(s,s,s); t.traverse(o => { if (o.isMesh) o.castShadow = false; }); scene.add(t); deco.push(t); }
+for (let i=0;i<(IS_TOUCH ? 150 : 230);i++){ const t = Math.random() < .12 ? makeRock() : makeTree(Math.random() < .1); const x = (Math.random() < .5 ? -1 : 1)*rand(HILL_X + .5, 50); t.position.set(x, hillH(x) - .3, rand(-220, 20)); const s = rand(.9, 1.5)*(t.children.length < 5 ? 2.2 : 1); t.scale.set(s,s,s); t.rotation.y = rand(0, 6); scene.add(t); deco.push(t); }
 setSleigh(save.sel);
 syncToggles();
 // unlock audio on first interaction (browsers block autoplay)

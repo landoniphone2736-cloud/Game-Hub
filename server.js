@@ -14,9 +14,9 @@ const PUB = path.join(__dirname, 'public');
 // Admins (can post announcements / What's new and make password-reset links): comma-separated emails
 const ADMINS = new Set(String(process.env.ADMIN_EMAILS || '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean));
 // players allowed per room: Storm Drop has one big shared room, Stick Rounds rooms are 1v1
-const roomCap = (room) => (room === 'stormdrop' ? 40 : room.startsWith('sr-') ? 4 : room === 'rocket-rivals' ? 100 : room === 'hub' ? 200 : 16);
+const roomCap = (room) => (room === 'stormdrop' ? 40 : room.startsWith('sr-') ? 4 : room === 'rocket-rivals' ? 100 : room === 'hub' ? 200 : room === 'sleigh' ? 200 : 16);
 const MAX_TOTAL = 400;
-const GAME_OF = (room) => (room === 'stormdrop' ? 'Storm Drop' : room.startsWith('sr-') ? 'Stick Rounds' : room === 'rocket-rivals' ? 'RocketRivals' : room === 'hub' ? 'hub' : null);
+const GAME_OF = (room) => (room === 'stormdrop' ? 'Storm Drop' : room.startsWith('sr-') ? 'Stick Rounds' : room === 'rocket-rivals' ? 'RocketRivals' : room === 'sleigh' ? 'Sleigh Rider 3D' : room === 'hub' ? 'hub' : null);
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json',
   '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.ico': 'image/x-icon',
   '.mp3': 'audio/mpeg', '.ogg': 'audio/ogg', '.wav': 'audio/wav', '.woff2': 'font/woff2', '.txt': 'text/plain; charset=utf-8' };
@@ -409,15 +409,63 @@ function hubBroadcast(msg) {
 const chatOut = (m) => ({ id: m.id, uid: m.user_id, name: m.name, text: m.text, ts: m.created });
 
 // ---------------------------------------------------------------------------
+// Sleigh Rider 3D leaderboard: best score per player name, kept in the kv store
+// ---------------------------------------------------------------------------
+const SLEIGH_KEY = 'sleigh_scores';
+const sleighHits = new Map(); // ip -> { start, n }
+let sleighLock = Promise.resolve();
+setInterval(() => { const t = Date.now(); for (const [k, a] of sleighHits) if (t - a.start > 60e3) sleighHits.delete(k); }, 60e3);
+async function sleighScores(req, res) {
+  try { await ensureReady(); } catch (e) { return send(res, 503, { error: 'Leaderboard is unavailable right now.' }); }
+  const board = async () => (await store.getKV(SLEIGH_KEY)) || [];
+  const pub = (list) => list.slice(0, 25).map((r) => ({ name: r.name, score: r.score, dist: r.dist, v: r.v ? 1 : 0, ts: r.ts }));
+  if (req.method === 'GET') return send(res, 200, { top: pub(await board()), total: (await board()).length });
+  if (req.method !== 'POST') return send(res, 405, { error: 'Method not allowed' });
+  const ip = ipOf(req), t = Date.now();
+  let a = sleighHits.get(ip); if (!a || t - a.start > 60e3) { a = { start: t, n: 0 }; sleighHits.set(ip, a); }
+  if (++a.n > 12) return send(res, 429, { error: 'Too many scores at once. Try again in a minute.' });
+  let b; try { b = await readBody(req, 2048); } catch { return send(res, 400, { error: 'Bad request' }); }
+  const score = Math.floor(Number(b.score)), dist = Math.floor(Number(b.dist)), gifts = Math.floor(Number(b.gifts)), secs = Number(b.secs), air = Math.floor(Number(b.air) || 0);
+  // sanity checks: top speed is 60 m/s, gifts are worth 10, stars at most double distance, big air at most 50 a jump
+  const ok = [score, dist, gifts, secs].every(Number.isFinite) && score > 0 && dist >= 0 && gifts >= 0 && secs > 0 && secs < 6 * 3600
+    && dist <= secs * 62 + 50 && gifts <= dist / 4 + 20 && score <= dist * 2 + gifts * 20 + air * 50 + 10 && air <= secs;
+  if (!ok) return send(res, 400, { error: 'That score did not add up.' });
+  let user = null; try { user = await authUser(req); } catch {}
+  const name = user ? cleanName(user.name) : String(b.name || '').replace(/[^\w \-.]/g, '').trim().slice(0, 14);
+  if (!name) return send(res, 400, { error: 'Pick a name first.' });
+  let result;
+  sleighLock = sleighLock.then(async () => {
+    const list = await board();
+    const key = name.toLowerCase();
+    const i = list.findIndex((r) => r.name.toLowerCase() === key);
+    let best = false;
+    if (i >= 0 && list[i].v && !user) { result = { error: 'That name belongs to an arcade account. Log in on the hub, or pick another name.', taken: true }; return; }
+    if (i < 0 || list[i].score < score) {
+      if (i >= 0) list.splice(i, 1);
+      list.push({ name, score, dist, gifts, v: user ? 1 : 0, uid: user ? user.id : null, ts: Date.now() });
+      list.sort((x, y) => y.score - x.score);
+      if (list.length > 200) list.length = 200;
+      await store.setKV(SLEIGH_KEY, list);
+      best = true;
+    }
+    const rank = list.findIndex((r) => r.name.toLowerCase() === key) + 1;
+    const runRank = list.filter((r) => r.score > score).length + 1;
+    result = { ok: true, best, rank, runRank, name, verified: !!user, top: pub(list), total: list.length };
+  }).catch((e) => { result = { error: 'Could not save: ' + errText(e) }; });
+  await sleighLock;
+  return send(res, result.error ? (result.taken ? 409 : 500) : 200, result);
+}
+
+// ---------------------------------------------------------------------------
 // API
 // ---------------------------------------------------------------------------
 async function handleApi(req, res, url) {
   if (url === '/api/ping') return send(res, 200, { ok: true, db: store.kind });
   if (url === '/api/stats') {
-    const out = { 'storm-drop': 0, 'stick-rounds': 0, 'rocket-rivals': 0, names: { 'storm-drop': [], 'stick-rounds': [], 'rocket-rivals': [] } };
+    const out = { 'storm-drop': 0, 'stick-rounds': 0, 'rocket-rivals': 0, 'sleigh-rider': 0, names: { 'storm-drop': [], 'stick-rounds': [], 'rocket-rivals': [], 'sleigh-rider': [] } };
     const nm = (v) => (typeof v === 'string' ? v.replace(/[^\w \-.]/g, '').trim().slice(0, 12) : '');
     for (const [room, m] of rooms) {
-      const g = room === 'stormdrop' ? 'storm-drop' : room.startsWith('sr-') ? 'stick-rounds' : room === 'rocket-rivals' ? 'rocket-rivals' : null;
+      const g = room === 'stormdrop' ? 'storm-drop' : room.startsWith('sr-') ? 'stick-rounds' : room === 'rocket-rivals' ? 'rocket-rivals' : room === 'sleigh' ? 'sleigh-rider' : null;
       if (!g) continue;
       out[g] += m.size;
       for (const [, c] of m) {
@@ -428,6 +476,7 @@ async function handleApi(req, res, url) {
     }
     return send(res, 200, out);
   }
+  if (url === '/api/sleigh/scores') return sleighScores(req, res);
 
   const GETS = new Set(['/api/me', '/api/hub', '/api/friends']);
   if (req.method !== 'POST' && !GETS.has(url)) return send(res, 405, { error: 'Method not allowed' });

@@ -6,11 +6,16 @@ A game hub with all our browser games, hosted on one Render site.
 /                 -> the arcade hub (public/index.html)
 /storm-drop/      -> Storm Drop .io (public/storm-drop/index.html)
 /stick-rounds/    -> Stick Rounds (public/stick-rounds/index.html)
+/rocket-rivals/   -> RocketRivals (public/rocket-rivals/index.html)
+/sleigh-rider/    -> Sleigh Rider 3D (public/sleigh-rider/index.html)
 ```
 
 - `server.js` serves everything in `public/`, runs the live multiplayer rooms for every game (WebSocket at `/ws`, each game/room code gets its own room), and stores accounts.
 - The hub shows how many people are in each game right now (`/api/stats`).
 - **Adding a new game later:** put its HTML in `public/<game-name>/index.html`, add a screenshot to `public/img/`, and copy one of the game cards in `public/index.html`.
+
+## Sleigh Rider 3D leaderboard
+Solo endless sleigh run. Scores post to `/api/sleigh/scores` (best score per name, stored with the accounts, so set `DATABASE_URL` to keep it). Logged-in arcade players post under their account name with a ✓; guests pick a name.
 
 ## Stick Rounds online
 On this site, Create room / Join with a 4-letter code goes through our own server, so it works for anyone with the link (no sign-in needed).

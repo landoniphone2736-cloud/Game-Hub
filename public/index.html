@@ -242,6 +242,16 @@ footer button{background:none;border:0;color:var(--dim);text-decoration:underlin
         <div class="play"><span class="mode">Create a room or join with a code</span><span class="btn">PLAY &rarr;</span></div>
       </div>
     </a>
+    <a class="card" href="/sleigh-rider/" data-game="sleigh-rider" data-name="Sleigh Rider 3D" style="--acc:#e8343a">
+      <div class="shot" style="background-image:url(/img/sleigh-rider.jpg)"><div class="badges"><div class="badge live"><span class="dot off"></span><span>0 playing</span></div></div><span class="key">press 4</span></div>
+      <div class="body">
+        <div class="head"><img src="/img/sleigh-rider-256.png" alt=""><h2 class="title">Sleigh Rider 3D</h2></div>
+        <p class="desc">Race down an endless snowy hill. Dodge trees and snowmen, jump logs, hit ramps and grab gifts as it gets faster and faster. Christmas music included.</p>
+        <div class="tags"><span>Endless runner</span><span>Online leaderboard</span><span>8 sleighs</span><span>3D</span><span>Works on phones</span></div>
+        <div class="who"></div>
+        <div class="play"><span class="mode">Beat the top score</span><span class="btn">PLAY &rarr;</span></div>
+      </div>
+    </a>
     <div class="card soon"><div><div class="big">+</div>More games coming soon</div></div>
   </main>
 
@@ -361,7 +371,7 @@ footer button{background:none;border:0;color:var(--dim);text-decoration:underlin
   const LS={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
   const el=(tag,cls,text)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e;};
   const site=location.origin+'/';
-  const GAMES={'Storm Drop':{href:'/storm-drop/',icon:'/img/storm-drop-256.png'},'Stick Rounds':{href:'/stick-rounds/',icon:'/img/stick-rounds-256.png'},'RocketRivals':{href:'/rocket-rivals/',icon:'🚀'}};
+  const GAMES={'Storm Drop':{href:'/storm-drop/',icon:'/img/storm-drop-256.png'},'Stick Rounds':{href:'/stick-rounds/',icon:'/img/stick-rounds-256.png'},'RocketRivals':{href:'/rocket-rivals/',icon:'🚀'},'Sleigh Rider 3D':{href:'/sleigh-rider/',icon:'/img/sleigh-rider-256.png'}};
   const hueOf=s=>{let h=0;for(const c of String(s))h=(h*31+c.charCodeAt(0))%360;return h;};
   const nameColor=s=>'hsl('+hueOf(s)+' 85% 70%)';
 

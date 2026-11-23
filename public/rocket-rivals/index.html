@@ -1228,7 +1228,17 @@ function resetRound(){
  }else{blue=newCar(arenaMap==='circle'?420:340,MID_Y,0,0,false);orange=newCar(arenaMap==='circle'?780:860,MID_Y,Math.PI,1,mode==='solo')}
  ball={x:W/2,y:MID_Y,vx:0,vy:0,r:20,spin:0,pinchCooldown:0,lastTouchTeam:-1,lastTouchColor:null};particles=[];cameraShake=0;for(const p of pads)p.respawn=0;
 }
-function showScreen(id){Object.entries(screens).forEach(([name,screen])=>screen.hidden=name!==id)}
+function isActiveOnlineMatch(){
+ return mode==='online' && online.connected && online.started && online.active && (gameType==='soccer'||gameType==='race');
+}
+function showScreen(id){
+ Object.entries(screens).forEach(([name,screen])=>screen.hidden=name!==id);
+ // IMPORTANT: the previous online match may have left these buttons visible.
+ // Offline Car Soccer, Beyblade, Freeplay, and Racing never show Online Lobby.
+ const onlineMatch=isActiveOnlineMatch();
+ $('pauseLobby').hidden=!(onlineMatch && online.role==='host');
+ $('resumeButton').hidden=onlineMatch && online.role==='guest';
+}
 function selectedGarageCar(){const draft=garageDraftCars??customCars;return garageContext==='flappy'?{body:FLAPPY_BODY,color:draft[0].color}:draft[garageTeam]}
 function openGarage(team=0,origin='menu'){
  const forFlappy=origin==='flappy'||(origin==='modes'&&selectedGameType==='flappy');
@@ -1392,7 +1402,7 @@ function notice(message,delay,kind='toast',accent='#8ceaff'){const el=$('notice'
 function configureEndAction(){
  const button=$('rematchButton');
  button.disabled=false;
- button.textContent=online.connected&&online.started?'↩ RETURN TO ONLINE LOBBY':'↻ REMATCH';
+ button.textContent=isActiveOnlineMatch()?'↩ RETURN TO ONLINE LOBBY':'↻ REMATCH';
 }
 function announceOnlineFinish(){
  if(online.connected&&online.started&&online.role==='host')onlineSend({type:'match_finished'});
@@ -4079,7 +4089,7 @@ function onlineMatchStart(msg){
  $('matchLength').value=clamp(Number(msg.minutes)||2,1,5);updateMatchLength();
  mode='online';if(matchKind==='racing'){startRacing(true);onlineRacingHelp()}else{start(true);onlineHelp()}
  configureEndAction();
- $('resumeButton').hidden=online.role!=='host';$('pauseLobby').hidden=online.role!=='host';
+ $('resumeButton').hidden=online.role!=='host';$('pauseLobby').hidden=online.role!=='host'; // showScreen also synchronizes this on every pause
  onlineText(matchKind==='racing'?'Race started! Free-for-all — everyone races for themselves.':'Match started! You are on '+(ownOnlinePlayer()?.team===0?'Blue':'Orange')+'.');
 }
 function receiveOnlineMessage(msg){
@@ -4190,8 +4200,8 @@ $('onlineInvite').onclick=async()=>{
 };
 // Online rematches go through the ready-up lobby again.
 $('rematchButton').onclick=()=>{
- if(online.connected){
-  if(online.started&&state==='over'){
+ if(isActiveOnlineMatch()){
+  if(state==='over'){
    $('rematchButton').disabled=true;
    $('rematchButton').textContent='RETURNING TO ONLINE LOBBY…';
    onlineSend({type:'return_lobby'});

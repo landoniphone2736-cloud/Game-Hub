@@ -14,6 +14,12 @@ A game hub with all our browser games, hosted on one Render site.
 - The hub shows how many people are in each game right now (`/api/stats`).
 - **Adding a new game later:** put its HTML in `public/<game-name>/index.html`, add a screenshot to `public/img/`, and copy one of the game cards in `public/index.html`.
 
+## Update log
+The hub shows an Update log (and the ✨ button). Admins can add or remove entries in the 🛡 admin tools. Updates shipped in code are listed in `SHIPPED_UPDATES` in `server.js`; each one is added to the log once, by its `id`.
+
+## Visitor counts
+Admins see a 📊 Visitors panel in the 🛡 admin tools: people and page views per day, and per game, for the last 14 days. No cookies or outside trackers; a visitor is a one-way hash of IP + browser + date, so IPs aren't stored. Optional: set `VISIT_SALT` on Render to any random text so counts stay consistent across restarts.
+
 ## Sleigh Rider 3D leaderboard
 Solo endless sleigh run. Scores post to `/api/sleigh/scores` (best score per name, stored with the accounts, so set `DATABASE_URL` to keep it). Logged-in arcade players post under their account name with a ✓; guests pick a name.
 

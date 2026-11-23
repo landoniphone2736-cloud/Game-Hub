@@ -36,6 +36,7 @@ function serveStatic(req, res, url) {
     }
     if (err) { res.writeHead(404, { 'content-type': 'text/html; charset=utf-8' }); return res.end('<h1>Not found</h1><p><a href="/">Back to the arcade</a></p>'); }
     const ext = path.extname(file).toLowerCase();
+    if (ext === '.html' && req.method === 'GET') countVisit(req, rel);
     // link previews (Discord, iMessage...) need full image URLs, so fill in this site's address
     const origin = originOf(req);
     const withOrigin = (buf, e) => (e === '.html' ? Buffer.from(buf.toString('utf8').replace(/content="\/img\//g, 'content="' + origin + '/img/')) : buf);
@@ -344,6 +345,57 @@ async function makeResetLink(req, uid) {
   return originOf(req) + '/?reset=' + token;
 }
 
+// ---------- visitor counts (private, admin-only): page views + unique visitors per day and per game.
+// No cookies or outside trackers. Visitors are counted by a one-way hash of IP + browser + date, so nobody's IP is stored.
+const VISIT_SALT = process.env.VISIT_SALT || crypto.randomBytes(16).toString('hex');
+const BOT_UA = /bot|crawl|spider|slurp|preview|discord|slack|facebook|whatsapp|telegram|twitter|curl|wget|python|axios|node-fetch|go-http|render|uptime|monitor/i;
+const etDay = (t = new Date()) => { try { return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).format(t); } catch { return t.toISOString().slice(0, 10); } };
+const visits = new Map(); // day -> { v, h:Set, g:{ key:{ v, h:Set } } }
+let visitsDirty = new Set();
+async function visitDay(day) {
+  let d = visits.get(day);
+  if (d) return d;
+  d = { v: 0, h: new Set(), g: {} };
+  try { const saved = await store.getKV('visits_' + day); if (saved) { d.v = saved.v || 0; d.h = new Set(saved.h || []); for (const k in saved.g || {}) d.g[k] = { v: saved.g[k].v || 0, h: new Set(saved.g[k].h || []) }; } } catch {}
+  visits.set(day, visits.get(day) || d);
+  for (const k of visits.keys()) if (k < etDay(new Date(Date.now() - 3 * 86400e3))) visits.delete(k);
+  return visits.get(day);
+}
+function countVisit(req, rel) {
+  const ua = String(req.headers['user-agent'] || '');
+  if (!ua || BOT_UA.test(ua)) return;
+  const m = /^\/([a-z0-9-]+)\/(index\.html)?$/.exec(rel), key = rel === '/' || rel === '/index.html' ? 'hub' : m ? m[1] : null;
+  if (!key) return;
+  const day = etDay(), hash = crypto.createHash('sha256').update(ipOf(req) + '|' + ua + '|' + day + '|' + VISIT_SALT).digest('base64').slice(0, 12);
+  ensureReady().then(() => visitDay(day)).then((d) => {
+    d.v++; if (d.h.size < 20000) d.h.add(hash);
+    const g = d.g[key] || (d.g[key] = { v: 0, h: new Set() }); g.v++; if (g.h.size < 20000) g.h.add(hash);
+    visitsDirty.add(day);
+  }).catch(() => {});
+}
+async function saveVisits() {
+  const days = [...visitsDirty]; visitsDirty = new Set();
+  for (const day of days) {
+    const d = visits.get(day); if (!d) continue;
+    const g = {}; for (const k in d.g) g[k] = { v: d.g[k].v, h: [...d.g[k].h] };
+    try { await store.setKV('visits_' + day, { v: d.v, h: [...d.h], g }); } catch { visitsDirty.add(day); }
+  }
+}
+setInterval(() => { saveVisits().catch(() => {}); }, 60e3);
+// save the counts when Render restarts the server (every deploy)
+process.on('SIGTERM', () => { saveVisits().catch(() => {}).finally(() => setTimeout(() => process.exit(0), 600)); setTimeout(() => process.exit(0), 3000); });
+async function visitReport(nDays) {
+  const out = [];
+  for (let i = 0; i < nDays; i++) {
+    const day = etDay(new Date(Date.now() - i * 86400e3));
+    let d = visits.get(day);
+    if (!d) { const saved = await store.getKV('visits_' + day).catch(() => null); d = saved ? { v: saved.v || 0, h: { size: (saved.h || []).length }, g: Object.fromEntries(Object.entries(saved.g || {}).map(([k, x]) => [k, { v: x.v || 0, h: { size: (x.h || []).length } }])) } : { v: 0, h: { size: 0 }, g: {} }; }
+    const games = {}; for (const k in d.g) games[k] = { views: d.g[k].v, people: d.g[k].h.size };
+    out.push({ day, views: d.v, people: d.h.size, games });
+  }
+  return out;
+}
+
 // ---------- hub content: announcement banner + What's new
 const DEFAULT_CHANGELOG = [
   { d: '2026-11-22', t: 'Bored Arcade is open! Storm Drop and Stick Rounds in one place, with friends, chat, accounts and live player counts.' },
@@ -353,7 +405,36 @@ const DEFAULT_CHANGELOG = [
   { d: '2026-11-18', t: 'Storm Drop is now 3D.' },
 ];
 async function getAnnouncement() { return (await store.getKV('announce')) || null; }
-async function getChangelog() { const c = await store.getKV('changelog'); return Array.isArray(c) ? c : DEFAULT_CHANGELOG; }
+// Updates we ship in code get added to the log once (admins can still remove them in the hub's admin tools).
+const SHIPPED_UPDATES = [
+  { id: 'rr-launch', d: '2026-11-22', t: 'RocketRivals joined the arcade: car soccer and Beyblade-style battles with private rooms and six-character codes.' },
+  { id: 'sr-v13', d: '2026-11-22', t: 'Stick Rounds: 2 new maps (Lava Rise, Portal Lab), card synergies, coins, hats, 18 achievements, phone controls and online chat.' },
+  { id: 'sleigh-launch', d: '2026-11-22', t: 'New game: Sleigh Rider 3D! Ride an endless snowy hill, dodge trees and snowmen, jump logs, grab gifts and buy 8 sleighs. Online leaderboard and Christmas music.' },
+  { id: 'sleigh-look', d: '2026-11-22', t: 'Sleigh Rider 3D got a brand new low-poly look: wooden sled view, icy ground, snowy forests, stumps and roots to jump.' },
+  { id: 'xmas-hub', d: '2026-11-23', t: 'The arcade is decorated for Christmas: snow, lights, a Santa hat and a countdown to Christmas Day.' },
+  { id: 'sleigh-daily', d: '2026-11-23', t: 'Sleigh Rider 3D: Daily Challenge (same hill for everyone, new one every day, its own leaderboard) and Missions that pay out bonus gifts.' },
+  { id: 'sleigh-obst', d: '2026-11-23', t: 'Sleigh Rider 3D: candy cane gates (+15 points), frozen ponds and penguins sliding across the hill.' },
+  { id: 'hub-search', d: '2026-11-23', t: 'Hub: search for games (press /), star your favorites to pin them to the top, and see which games are great on phones.' },
+  { id: 'hub-leaders', d: '2026-11-23', t: 'Hub: new Arcade Leaderboard with the top Storm Drop players and Sleigh Rider scores, plus Christmas music on the 🎵 button.' },
+  { id: 'hub-log', d: '2026-11-23', t: 'Hub: this update log! Every new game and feature shows up here.' },
+];
+let changelogMerged = false;
+async function getChangelog() {
+  const c = await store.getKV('changelog');
+  let list = Array.isArray(c) ? c.slice() : DEFAULT_CHANGELOG.slice();
+  if (!changelogMerged) {
+    changelogMerged = true;
+    const done = new Set((await store.getKV('changelog_ids')) || []);
+    const add = SHIPPED_UPDATES.filter((u) => !done.has(u.id));
+    if (add.length) {
+      for (const u of add.slice().reverse()) { list.push({ d: u.d, t: u.t }); done.add(u.id); } // newest first within a day
+      list.sort((a, b) => (a.d < b.d ? 1 : a.d > b.d ? -1 : 0));
+      list = list.slice(0, 80);
+      await store.setKV('changelog', list); await store.setKV('changelog_ids', [...done]);
+    }
+  }
+  return list;
+}
 
 // ---------- live status of logged-in players (from their open hub/game connections)
 const online = new Map(); // uid -> { name, socks: Set(ws) }
@@ -654,12 +735,13 @@ async function handleApi(req, res, url) {
       hubBroadcast({ t: 'ann', ann });
       return send(res, 200, { ok: true, ann });
     }
+    if (url === '/api/admin/visits') { await saveVisits().catch(() => {}); return send(res, 200, { days: await visitReport(b.days ? int(b.days, 1, 60) : 14) }); }
     if (url === '/api/admin/changelog') {
       const list = (await getChangelog()).slice();
       if (b.remove !== undefined) list.splice(int(b.remove, 0, 999), 1);
       else { const t = cleanText(b.text, 400); if (!t) return send(res, 400, { error: 'Write something first.' }); list.unshift({ d: new Date().toISOString().slice(0, 10), t }); }
-      await store.setKV('changelog', list.slice(0, 60));
-      hubBroadcast({ t: 'log', changelog: list.slice(0, 60) });
+      await store.setKV('changelog', list.slice(0, 80));
+      hubBroadcast({ t: 'log', changelog: list.slice(0, 80) });
       return send(res, 200, { ok: true, changelog: list });
     }
     if (url === '/api/admin/resetlink') {

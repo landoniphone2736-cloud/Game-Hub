@@ -172,6 +172,19 @@ footer button{background:none;border:0;color:var(--dim);text-decoration:underlin
 .switch.on{background:var(--green)}
 .switch.on::after{left:23px}
 .log{display:flex;flex-direction:column;gap:12px}
+.vstats .sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-bottom:12px}
+.vstats .sum div{background:#ffffff0a;border-radius:12px;padding:10px;text-align:center}
+.vstats .sum b{display:block;font-size:24px;color:var(--hot)}
+.vstats .sum span{font-size:12px;color:var(--dim)}
+.vstats .bars{display:flex;align-items:flex-end;gap:4px;height:110px;padding:6px 0;border-bottom:1px solid var(--line)}
+.vstats .bars div{flex:1;background:linear-gradient(180deg,var(--cyan),#2a6fb8);border-radius:5px 5px 0 0;min-height:2px;position:relative}
+.vstats .bars div:hover::after{content:attr(data-t);position:absolute;bottom:100%;left:50%;transform:translateX(-50%);background:#000c;padding:3px 7px;border-radius:6px;font-size:12px;white-space:nowrap}
+.vstats .days{display:flex;gap:4px;font-size:10px;color:var(--dim);margin-top:3px}
+.vstats .days span{flex:1;text-align:center}
+.vstats table{width:100%;border-collapse:collapse;margin-top:12px;font-size:14px}
+.vstats td,.vstats th{padding:6px 8px;text-align:left;border-bottom:1px solid var(--line)}
+.vstats th{color:var(--dim);font-weight:600}
+.vstats td.n{text-align:right;font-variant-numeric:tabular-nums}
 .log .it{display:flex;gap:12px;align-items:flex-start;padding:10px 12px;border-radius:12px;background:#ffffff08}
 .log .d{font-weight:700;color:var(--hot);white-space:nowrap;font-size:13px;min-width:62px}
 .log .t{flex:1}
@@ -264,7 +277,7 @@ body.xmas .card{position:relative}
       <p class="sub">Games we made. Grab your friends and play, no downloads.</p>
     </div>
     <div class="acct">
-      <button class="icon-btn" id="newsBtn" title="What's new" aria-label="What's new">&#10024;<span class="dotbadge" id="newsDot" hidden>!</span></button>
+      <button class="icon-btn" id="newsBtn" title="Update log" aria-label="Update log">&#10024;<span class="dotbadge" id="newsDot" hidden>!</span></button>
       <button class="icon-btn" id="musicBtn" title="Music" aria-label="Music on/off">&#127925;</button>
       <button class="icon-btn" id="sfxBtn" title="Sounds" aria-label="Sounds on/off">&#128266;</button>
       <button class="icon-btn" id="adminBtn" title="Admin tools" aria-label="Admin tools" hidden>&#128737;</button>
@@ -339,6 +352,13 @@ body.xmas .card{position:relative}
     </div>
   </section>
 
+  <section class="lbsec">
+    <div class="panel">
+      <div class="phead"><h3 style="margin:0">📜 Update log</h3><button class="pill ghost" id="logAll" style="padding:6px 12px">See all updates</button></div>
+      <div class="log" id="logInline" style="padding:14px 16px"></div>
+    </div>
+  </section>
+
   <section class="social">
     <div class="panel">
       <div class="phead"><h3>&#128172; Arcade chat</h3><small id="chatState">connecting&hellip;</small></div>
@@ -362,7 +382,7 @@ body.xmas .card{position:relative}
   <div class="share">
     <span>Send your friends this link:</span><code id="link"></code><button class="pill" id="copy">Copy</button><button class="pill ghost" id="shareBtn" hidden>Share&hellip;</button>
   </div>
-  <footer><span>Log in once and your Storm Drop coins, rank and items follow you to any device.</span><span><button id="newsLink">What's new</button> &middot; Tip: press 1–9 to jump into a game, or / to search.</span></footer>
+  <footer><span>Log in once and your Storm Drop coins, rank and items follow you to any device.</span><span><button id="newsLink">Update log</button> &middot; Tip: press 1–9 to jump into a game, or / to search.</span></footer>
 </div>
 
 <div id="toasts"></div>
@@ -428,17 +448,20 @@ body.xmas .card{position:relative}
 
 <!-- what's new -->
 <div class="modal wide" id="mNews" hidden><div class="box" role="dialog" aria-modal="true">
-  <h2>What's new <button class="close" data-close>&times;</button></h2>
+  <h2>📜 Update log <button class="close" data-close>&times;</button></h2>
   <div class="log" id="logList"></div>
 </div></div>
 
 <!-- admin -->
 <div class="modal wide" id="mAdmin" hidden><div class="box" role="dialog" aria-modal="true">
   <h2>Admin tools <button class="close" data-close>&times;</button></h2>
-  <h4 style="margin-top:0">Announcement banner</h4>
+  <h4 style="margin-top:0">📊 Visitors</h4>
+  <p class="note" style="margin-top:0">Only admins can see this. People are counted once per day per device; no cookies or outside trackers.</p>
+  <div id="vStats" class="vstats">Loading&hellip;</div>
+  <h4>Announcement banner</h4>
   <textarea class="field" id="aAnn" maxlength="280" placeholder="Shows at the top of the hub for everyone. Leave empty to remove it."></textarea>
   <div class="row"><span class="formmsg" id="aAnnMsg" style="flex:1"></span><button class="mini ghost" id="aAnnClear">Remove</button><button class="mini" id="aAnnGo">Post</button></div>
-  <h4>Add to What's new</h4>
+  <h4>Add to the update log</h4>
   <textarea class="field" id="aLog" maxlength="400" placeholder="e.g. Stick Rounds: new map with lava pits"></textarea>
   <div class="row"><span class="formmsg" id="aLogMsg" style="flex:1"></span><button class="mini" id="aLogGo">Add entry</button></div>
   <div class="log" id="aLogList" style="margin-top:10px"></div>
@@ -642,13 +665,24 @@ body.xmas .card{position:relative}
       if(admin){const x=el('button','mini x','×');x.title='Remove';x.onclick=async()=>{try{const j=await api('/api/admin/changelog',{remove:i});setLog(j.changelog);}catch(er){msg('aLogMsg',er.message,'bad');}};it.appendChild(x);}
       box.appendChild(it);});
     if(!list.length)box.appendChild(el('p','empty','Nothing yet.'));}
-  function setLog(list){LOG=list||[];$('newsDot').hidden=!LOG.length||logKey(LOG[0])===LS.get('arcade-log-seen');renderLog(LOG,$('logList'));renderLog(LOG,$('aLogList'),true);}
+  function setLog(list){LOG=list||[];$('newsDot').hidden=!LOG.length||logKey(LOG[0])===LS.get('arcade-log-seen');renderLog(LOG,$('logList'));renderLog(LOG.slice(0,5),$('logInline'));$('logAll').hidden=LOG.length<=5;renderLog(LOG,$('aLogList'),true);}
   function openNews(){renderLog(LOG,$('logList'));openModal('mNews');if(LOG.length)LS.set('arcade-log-seen',logKey(LOG[0]));$('newsDot').hidden=true;}
-  $('newsBtn').onclick=openNews;$('newsLink').onclick=openNews;
+  $('newsBtn').onclick=openNews;$('newsLink').onclick=openNews;$('logAll').onclick=openNews;
   api('/api/hub').then(j=>{showAnn(j.ann);setLog(j.changelog);}).catch(()=>{});
 
   // admin
-  $('adminBtn').onclick=()=>{openModal('mAdmin');$('aAnn').value=$('ann').hidden?($('annText').textContent||''):$('annText').textContent;};
+  const GNAME={hub:'Hub (main page)','storm-drop':'Storm Drop','stick-rounds':'Stick Rounds','rocket-rivals':'RocketRivals','sleigh-rider':'Sleigh Rider 3D'};
+  async function loadVisits(){const box=$('vStats');try{const j=await api('/api/admin/visits',{days:14});const d=j.days,today=d[0]||{people:0,views:0},yest=d[1]||{people:0};
+      const wk=d.slice(0,7),sumP=wk.reduce((a,x)=>a+x.people,0),sumV=wk.reduce((a,x)=>a+x.views,0),max=Math.max(1,...d.map(x=>x.people));
+      const games={};for(const x of wk)for(const k in x.games){games[k]=games[k]||{views:0,people:0};games[k].views+=x.games[k].views;games[k].people+=x.games[k].people;}
+      const rows=Object.entries(games).sort((a,b)=>b[1].people-a[1].people).map(([k,v])=>`<tr><td>${esc(GNAME[k]||k)}</td><td class="n">${v.people}</td><td class="n">${v.views}</td></tr>`).join('')||'<tr><td colspan="3">No visits yet.</td></tr>';
+      const rev=d.slice().reverse(),lbl=x=>{const t=new Date(x.day+'T12:00:00');return t.toLocaleDateString(undefined,{month:'numeric',day:'numeric'});};
+      box.innerHTML=`<div class="sum"><div><b>${today.people}</b><span>people today</span></div><div><b>${yest.people}</b><span>yesterday</span></div><div><b>${sumP}</b><span>people, last 7 days</span></div><div><b>${sumV}</b><span>page views, 7 days</span></div></div>
+        <div class="bars">${rev.map(x=>`<div style="height:${Math.round(x.people/max*100)}%" data-t="${lbl(x)}: ${x.people} people, ${x.views} views"></div>`).join('')}</div>
+        <div class="days">${rev.map((x,i)=>`<span>${i%2?'':lbl(x)}</span>`).join('')}</div>
+        <table><tr><th>Last 7 days</th><th class="n" style="text-align:right">People</th><th style="text-align:right">Views</th></tr>${rows}</table>`;}
+    catch(e){box.textContent='Could not load visitor counts: '+e.message;}}
+  $('adminBtn').onclick=()=>{openModal('mAdmin');loadVisits();$('aAnn').value=$('ann').hidden?($('annText').textContent||''):$('annText').textContent;};
   $('aAnnGo').onclick=async()=>{try{const j=await api('/api/admin/announce',{text:$('aAnn').value});LS.del('arcade-ann-hidden');showAnn(j.ann);msg('aAnnMsg',j.ann?'Posted for everyone.':'Removed.','good');}catch(e){msg('aAnnMsg',e.message,'bad');}};
   $('aAnnClear').onclick=async()=>{$('aAnn').value='';$('aAnnGo').click();};
   $('aLogGo').onclick=async()=>{try{const j=await api('/api/admin/changelog',{text:$('aLog').value});$('aLog').value='';setLog(j.changelog);msg('aLogMsg','Added.','good');}catch(e){msg('aLogMsg',e.message,'bad');}};

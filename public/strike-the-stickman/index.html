@@ -1,1 +1,21 @@
-
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Strike the Stickman | Bored Arcade</title>
+<style>html,body{height:100%;margin:0;background:#18243b;color:#fff;font:14px system-ui,sans-serif}body{display:flex;flex-direction:column}header{flex:none;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:7px 12px;background:#0d0920}a{color:#ffe07f;text-decoration:none}a:focus-visible{outline:2px solid #ffe07f}iframe{display:block;border:0;width:100%;flex:1;min-height:0}</style></head>
+<body><header><a href="/">← Bored Arcade</a><a href="https://strike-the-stickman.onrender.com/" title="Use the standalone game if account login is blocked in the embedded version">Open standalone game ↗</a></header>
+<iframe id="game" title="Strike the Stickman" src="https://strike-the-stickman.onrender.com/" allowfullscreen></iframe>
+<script>
+// One live connection per GameHub game page; no account details are sent.
+let socket=null,retry=null,active=true,loaded=false;
+function connect(){
+ if(!active||!loaded||socket||retry)return;
+ const url=new URL('/ws?room=strike-the-stickman',location.href);url.protocol=location.protocol==='https:'?'wss:':'ws:';
+ const current=new WebSocket(url);socket=current;
+ current.onclose=()=>{if(socket!==current)return;socket=null;if(active){retry=setTimeout(()=>{retry=null;connect();},3000);}};
+ current.onerror=()=>current.close();
+}
+function stop(){active=false;clearTimeout(retry);retry=null;const old=socket;socket=null;if(old)old.close();}
+document.getElementById('game').addEventListener('load',()=>{loaded=true;connect();});
+addEventListener('pagehide',stop);
+addEventListener('pageshow',()=>{active=true;connect();});
+</script></body></html>
